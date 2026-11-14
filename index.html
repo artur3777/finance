@@ -223,6 +223,8 @@ const CATS = [
   {n:'Податки і комісії',i:'🧾',c:'#78716c'},
   {n:'Готівка',i:'💵',c:'#84cc16'},
   {n:'Перекази людям',i:'↗️',c:'#94a3b8'},
+  {n:'Кредити і розстрочки',i:'💳',c:'#dc2626'},
+  {n:'Страхування',i:'🛡️',c:'#0d9488'},
   {n:'Інше',i:'•',c:'#9ca3af'},
   {n:'Зарплата',i:'💰',c:'#16a34a',k:'inc'},
   {n:'Amazon / Payoneer',i:'📈',c:'#059669',k:'inc'},
@@ -268,6 +270,7 @@ const KW = [
   ['mcdonald','Кафе і ресторани'],['kfc','Кафе і ресторани'],['starbucks','Кафе і ресторани'],['burger','Кафе і ресторани'],['zen garden','Кафе і ресторани'],['restaur','Кафе і ресторани'],['pizza','Кафе і ресторани'],['bistro','Кафе і ресторани'],['cafe','Кафе і ресторани'],['coffee','Кафе і ресторани'],
   ['ticket','Розваги'],['cinema','Розваги'],['cinemacity','Розваги'],
   ['paypal','Покупки онлайн'],['amazon.','Покупки онлайн',-1],
+  ['оплати частинами','Кредити і розстрочки'],['оплата частинами','Кредити і розстрочки'],['погашення кредиту','Кредити і розстрочки'],['страхув','Страхування'],['hotlinefinance','Страхування'],
   ['паркінг','Паркінг'],['parking','Паркінг'],['паркування','Паркінг'],
   ['сільпо','Продукти'],['silpo','Продукти'],['атб','Продукти'],['atb','Продукти'],['novus','Продукти'],['фора','Продукти'],['fora','Продукти'],
   ['metro','Продукти'],['varus','Продукти'],['ашан','Продукти'],['auchan','Продукти'],['велмарт','Продукти'],['наш край','Продукти'],['таврія','Продукти'],
@@ -286,6 +289,7 @@ const KW = [
 ];
 // Privat24 bank categories → our categories
 const BANKCAT = [
+  ['страхув','Страхування'],['частинами','Кредити і розстрочки'],['кредит','Кредити і розстрочки'],
   ['продукт','Продукти'],['супермаркет','Продукти'],['кафе','Кафе і ресторани'],['ресторан','Кафе і ресторани'],['фастфуд','Кафе і ресторани'],
   ['таксі','Транспорт'],['транспорт','Транспорт'],['азс','Авто і пальне'],['пальне','Авто і пальне'],['авто','Авто і пальне'],
   ['комунал','Комунальні'],['мобільн','Зв\'язок та інтернет'],['зв\'язок','Зв\'язок та інтернет'],['інтернет-магазин','Покупки онлайн'],['інтернет','Зв\'язок та інтернет'],
@@ -503,52 +507,89 @@ async function pdfRows(buf){
     items.sort((a, b) => a.y - b.y || a.x - b.x);
     for (const it of items) {
       const L = lines[lines.length - 1];
-      if (L && L.p === p && Math.abs(L.y - it.y) <= Math.max(2, it.h * 0.5)) L.items.push(it);
+      if (L && L.p === p && Math.abs(L.y - it.y) <= Math.max(1.5, it.h * 0.35)) L.items.push(it);
       else lines.push({p, y: it.y, h: it.h, items: [it]});
     }
   }
   lines.forEach(L => { L.items.sort((a, b) => a.x - b.x); L.text = L.items.map(i => i.s).join(' '); });
-  const isData = L => PDF_DATE.test(L.items[0].s);
-  const hasHdr = t => /дата|date/i.test(t) && /сума|сумма|amount|зарахування|списання/i.test(t);
-  // header: line with "дата" whose next lines (before first data line) contain "сума"
-  let hi = -1, he = -1;
-  for (let i = 0; i < lines.length && hi < 0; i++) {
-    if (!/дата|date/i.test(lines[i].text) || isData(lines[i])) continue;
-    let j = i, txt = '';
-    while (j < lines.length && j < i + 5 && !isData(lines[j])) { txt += ' ' + lines[j].text; j++; }
-    if (hasHdr(txt) && j < lines.length && isData(lines[j])) { hi = i; he = j; }
+  const H = lines.length ? lines.map(l => l.h).sort((a, b) => a - b)[Math.floor(lines.length / 2)] : 8;
+  const fullText = lines.map(l => l.text).join('\n');
+  // ---- header block: tightly spaced lines around a line with "дата", containing "сума"
+  let hs = -1, he = -1;
+  for (let i = 0; i < lines.length && hs < 0; i++) {
+    if (!/дата|date/i.test(lines[i].text) || PDF_DATE.test(lines[i].items[0].s)) continue;
+    let a = i, b = i, mg = 0;
+    const lim = () => mg ? Math.min(1.7 * H, 1.6 * mg) : 1.7 * H;
+    while (a > 0 && lines[a-1].p === lines[i].p && lines[a].y - lines[a-1].y <= lim()) { mg = Math.max(mg, lines[a].y - lines[a-1].y); a--; }
+    while (b + 1 < lines.length && lines[b+1].p === lines[i].p && lines[b+1].y - lines[b].y <= lim() && !PDF_DATE.test(lines[b+1].items[0].s)) { mg = Math.max(mg, lines[b+1].y - lines[b].y); b++; }
+    const txt = lines.slice(a, b + 1).map(l => l.text).join(' ');
+    if (/сума|сумма|amount|зарахування|списання/i.test(txt)) { hs = a; he = b + 1; }
   }
-  const pre = lines.slice(0, hi < 0 ? 30 : hi).map(l => l.text).join(' ');
+  const pre = lines.slice(0, hs < 0 ? 40 : hs).map(l => l.text).join(' ');
   const meta = {};
   const cm = pre.match(/(?:\*{2,}|[xх]{4,}|•+)\s*(\d{4})/i); if (cm) meta.card = cm[1];
-  const cur = pre.match(/\b(UAH|USD|EUR|PLN|GBP)\b|(грн)/i); if (cur) meta.currency = normCur(cur[0]);
-  if (hi < 0) return {rows: pdfFallback(lines), meta};
-  // columns from header items (merge overlapping x-ranges across header lines)
+  const cur = pre.match(/валюта\s+рахунку[:\s]*([A-Za-zА-Яа-я]{3})/i) || pre.match(/\b(UAH|USD|EUR|PLN|GBP)\b|(грн)/i);
+  if (cur) meta.currency = normCur(cur[1] || cur[0]);
+  const endBal = pre.match(/баланс на кінець періоду[:\s]*([-−]?[\d\s ]+[.,]\d{2})/i); if (endBal) meta.endBalance = parseNum(endBal[1]);
+  const lim = pre.match(/кредитний ліміт[:\s]*([\d\s ]+[.,]\d{2})/i); if (lim) meta.creditLimit = parseNum(lim[1]);
+  if (hs < 0) return {rows: pdfFallback(lines), meta};
+  // ---- columns from header items
+  const hItems = lines.slice(hs, he).flatMap(l => l.items);
+  const vocab = new Set(hItems.map(i => i.s));
   const cols = [];
-  for (const it of lines.slice(hi, he).flatMap(l => l.items).sort((a, b) => a.x - b.x)) {
-    const c = cols.find(c => it.x < c.x1 + 3 && it.x + it.w > c.x0 - 3);
+  for (const it of [...hItems].sort((a, b) => a.x - b.x)) {
+    const c = cols.find(c => it.x < c.x1 + 2 && it.x + it.w > c.x0 - 2);
     if (c) { c.x0 = Math.min(c.x0, it.x); c.x1 = Math.max(c.x1, it.x + it.w); c.parts.push(it); }
     else cols.push({x0: it.x, x1: it.x + it.w, parts: [it]});
   }
   cols.sort((a, b) => a.x0 - b.x0);
-  const header = cols.map(c => c.parts.sort((a, b) => a.y - b.y || a.x - b.x).map(p => p.s).join(' '));
-  const colOf = it => {
-    const cx = it.x + it.w / 2;
-    let best = 0, bd = Infinity;
-    cols.forEach((c, i) => { const d = cx < c.x0 ? c.x0 - cx : cx > c.x1 ? cx - c.x1 : 0; if (d < bd) { bd = d; best = i; } });
-    return best;
-  };
+  const header = cols.map(c => c.parts.sort((a, b) => a.y - b.y || a.x - b.x).map(p => p.s).join(' ').replace(/\s+/g, ' '));
+  const colOf = it => { const cx = it.x + it.w / 2; let best = 0, bd = Infinity;
+    cols.forEach((c, i) => { const d = cx < c.x0 ? c.x0 - cx : cx > c.x1 ? cx - c.x1 : 0; if (d < bd) { bd = d; best = i; } }); return best; };
+  const dateCol = Math.max(0, header.findIndex(h => /дата|date/i.test(h)));
+  const isHeaderLine = L => L.items.every(i => vocab.has(i.s));
+  const T = 2.2 * H;
   const rows = [header];
-  let cur_ = null, prev = null;
-  for (let i = he; i < lines.length; i++) {
-    const L = lines[i];
-    if (!isData(L) && hasHdr(L.text)) { prev = null; continue; }           // repeated header on next page
-    if (isData(L)) { cur_ = header.map(() => ''); rows.push(cur_); }
-    else if (!cur_ || !prev || prev.p !== L.p || L.y - prev.y > L.h * 2.4) { prev = null; continue; } // footer / unrelated text
-    for (const it of L.items) { const k = colOf(it); cur_[k] = (cur_[k] ? cur_[k] + ' ' : '') + it.s; }
-    prev = L;
+  for (const p of [...new Set(lines.map(l => l.p))]) {
+    let pl = lines.filter(l => l.p === p && (lines.indexOf(l) >= he || l.p !== lines[hs].p));
+    const lastHdr = pl.map(isHeaderLine).lastIndexOf(true);
+    if (lastHdr >= 0) pl = pl.slice(lastHdr + 1);
+    const anchors = pl.filter(L => L.items.some(i => PDF_DATE.test(i.s) && colOf(i) === dateCol));
+    if (!anchors.length) continue;
+    const bounds = anchors.map(() => ({}));
+    anchors.forEach((A, k) => {
+      if (k === 0) { let i = pl.indexOf(A); while (i > 0 && A.y - pl[i-1].y >= 0 && pl[i].y - pl[i-1].y <= T) i--; bounds[k].top = pl[i].y; }
+      if (k === anchors.length - 1) { let i = pl.indexOf(A); while (i + 1 < pl.length && pl[i+1].y - pl[i].y <= T) i++; bounds[k].bot = pl[i].y; }
+      else {
+        const B = anchors[k + 1], ys = pl.filter(l => l.y >= A.y && l.y <= B.y).map(l => l.y);
+        let g = -1, cut = (A.y + B.y) / 2;
+        for (let i = 1; i < ys.length; i++) if (ys[i] - ys[i-1] > g) { g = ys[i] - ys[i-1]; cut = (ys[i] + ys[i-1]) / 2; }
+        bounds[k].bot = cut - 0.01; bounds[k + 1].top = cut + 0.01;
+      }
+    });
+    anchors.forEach((A, k) => {
+      const row = header.map(() => '');
+      for (const L of pl) if (L.y >= bounds[k].top && L.y <= bounds[k].bot) for (const it of L.items) { const c = colOf(it); row[c] = (row[c] ? row[c] + ' ' : '') + it.s; }
+      rows.push(row);
+    });
   }
-  if (meta.card && !header.some(h => /^(картка|номер картки|card)/i.test(h.trim()))) { header.push('Картка'); rows.slice(1).forEach(r => r.push('**** ' + meta.card)); }
+  // drop rows without any money value (page headers that happen to contain a date)
+  for (let i = rows.length - 1; i >= 1; i--) if (!rows[i].some((c, k) => k !== dateCol && /\d[.,]\d{2}(?!\d)/.test(c))) rows.splice(i, 1);
+  // ---- one statement = one account: use the statement's card for every row
+  const cardCol = header.findIndex(h => /^(картка|номер картки|card)/i.test(h.trim()));
+  if (meta.card) { if (cardCol >= 0) rows.slice(1).forEach(r => r[cardCol] = '**** ' + meta.card); else { header.push('Картка'); rows.slice(1).forEach(r => r.push('**** ' + meta.card)); } }
+  // ---- PrivatBank details: "<Категорія>, <КРАЇНА>, термінал …, отримувач <NAME>, банк отримувача …"
+  const descCol = header.findIndex(h => /деталі|опис|призначення|description/i.test(h));
+  if (descCol >= 0 && /приват|privat/i.test(fullText)) {
+    header.push('Категорія');
+    rows.slice(1).forEach(r => {
+      const d = r[descCol] || ''; let cat = '';
+      const rec = d.match(/отримувач\s+(.+?)(?:,\s*банк отримувача|,\s*код|$)/i);
+      if (rec && /термінал|документ/i.test(d)) { cat = d.split(',')[0].trim(); r[descCol] = rec[1].replace(/[,\s]+$/, '').trim(); }
+      r[descCol] = r[descCol].replace(/\s+/g, ' ').replace(/ ,/g, ',').trim();
+      r.push(cat);
+    });
+  }
   return {rows, meta};
 }
 function pdfFallback(lines){
@@ -568,9 +609,9 @@ function pdfFallback(lines){
 const FIELDS = {
   date:['дата і час операції','дата i час операції','дата та час операції','дата операції','дата і час','дата','date','transaction date','posting date'],
   desc:['деталі операції','опис операції','призначення платежу','призначення','опис','деталі','description','details','merchant','назва'],
-  opAmount:['сума в валюті операції','сума в валюті транзакції','original amount'],
+  opAmount:['сума в валюті операції','сума у валюті операції','сума в валюті транзакції','сума у валюті транзакції','original amount'],
   opCurrency:['валюта операції','валюта транзакції','original currency'],
-  amount:['сума в валюті картки','сума в валюті рахунку','сума операції','сума','amount','net amount'],
+  amount:['сума в валюті картки','сума у валюті картки','сума в валюті рахунку','сума у валюті рахунку','сума операції','сума','amount','net amount'],
   currency:['валюта картки','валюта рахунку','currency','валюта'],
   credit:['надходження','зарахування','credit','прихід'],
   debit:['витрата','списання','debit','розхід'],
@@ -578,7 +619,7 @@ const FIELDS = {
   tz:['time zone','timezone','часовий пояс'],
   mcc:['mcc'],
   bankCat:['категорія','category','type'],
-  balance:['залишок після операції','залишок на кінець періоду','залишок','balance','running balance'],
+  balance:['залишок після операції','залишок після','залишок на кінець періоду','залишок','balance','running balance'],
   card:['картка','номер картки','card'],
   status:['статус','status'],
 };
@@ -645,8 +686,8 @@ function extract(rows, hi, map, invert){
     out.push({
       date, amount,
       desc: String(g('desc') ?? '').trim(),
-      currency: normCur(g('currency')) || fileCur,
-      opAmount: parseNum(g('opAmount')), opCurrency: normCur(g('opCurrency')),
+      currency: normCur(g('currency')) || normCur((String(g('amount') ?? '').match(/[A-Za-z]{3}|грн/) || [''])[0]) || fileCur,
+      opAmount: parseNum(g('opAmount')), opCurrency: normCur(g('opCurrency')) || normCur((String(g('opAmount') ?? '').match(/[A-Za-z]{3}|грн/) || [''])[0]),
       mcc: parseInt(g('mcc')) || null, bankCat: String(g('bankCat') ?? '').trim(),
       balance: parseNum(g('balance')), card: String(g('card') ?? '').trim(),
     });
@@ -894,7 +935,7 @@ function currencyBlock(){
   return `<h2>Залишки за валютами</h2><div class="card">
     <div class="cbar">${list.map(x => `<i style="width:${Math.max(0, x.u)/tot*100}%;background:${COL[x.c] || '#64748b'}"></i>`).join('')}</div>
     ${list.map(x => `<div class="row" style="margin-top:10px" onclick="go('acc')"><div class="curb" style="background:${COL[x.c] || '#64748b'}22;color:${COL[x.c] || '#64748b'}">${SYM[x.c] || x.c}</div>
-      <div class="grow"><div class="mid" style="font-size:17px">${money(x.v, x.c, true)}</div>${cv(x.v, x.c, 'cv l')}<div class="hint small">${x.n} рах. · ${Math.round(Math.max(0, x.u)/tot*100)}% капіталу</div></div></div>`).join('')}
+      <div class="grow"><div class="mid" style="font-size:17px">${money(x.v, x.c, true)}</div>${cv(x.v, x.c, 'cv l')}<div class="hint small">${x.n} рах. · ${x.u < 0 ? '<span class="red">заборгованість</span>' : Math.round(x.u/tot*100) + '% капіталу'}</div></div></div>`).join('')}
   </div>`;
 }
 
@@ -1172,7 +1213,7 @@ acc(){
   const blocks = Object.entries(groups).map(([b, list]) => `<h2>${BANKS[b]?.i || '🏦'} ${BANKS[b]?.n || b}</h2><div class="card list" style="padding:2px 14px">${list.map(a => {
     const last = S.tx.filter(t => t.acc === a.id).reduce((m, t) => t.date > m ? t.date : m, '');
     const n = S.tx.filter(t => t.acc === a.id).length;
-    return `<div class="it" onclick="accSheet('${a.id}')"><div class="grow"><div class="ellip">${esc(a.name)} ${a.inTotal===false?'<span class="hint small">(не в сумі)</span>':''}</div><div class="hint small">${n} операцій${last ? ' · остання ' + last.slice(0,10).split('-').reverse().join('.') : ''}${a.balanceDate ? ' · залишок на ' + a.balanceDate.slice(0,10).split('-').reverse().join('.') : ''}</div></div>
+    return `<div class="it" onclick="accSheet('${a.id}')"><div class="grow"><div class="ellip">${esc(a.name)} ${a.inTotal===false?'<span class="hint small">(не в сумі)</span>':''}</div><div class="hint small">${n} операцій${last ? ' · остання ' + last.slice(0,10).split('-').reverse().join('.') : ''}${a.balanceDate ? ' · залишок на ' + a.balanceDate.slice(0,10).split('-').reverse().join('.') : ''}${a.creditLimit ? `<br>кредитний ліміт ${money(a.creditLimit, a.currency)} · доступно ${money(a.creditLimit + (a.balance || 0), a.currency)}${a.balance < 0 ? ' · <span class="red">борг ' + money(-a.balance, a.currency) + '</span>' : ''}` : ''}</div></div>
       <div class="amt">${money(a.balance, a.currency, true)}${a.balance != null ? cv(a.balance, a.currency) : ''}</div></div>`;
   }).join('')}</div>`).join('');
   return `<div class="card"><div class="hint">Разом на рахунках</div><div class="big">${D(T.uah)}</div><div class="hint">≈ ${others(T.uah)}</div></div>
@@ -1346,6 +1387,8 @@ function accSheet(id){
     <label class="f">Банк</label><select id="a_bank">${Object.entries(BANKS).map(([k, b]) => `<option value="${k}" ${a && a.bank===k?'selected':''}>${b.i} ${b.n}</option>`).join('')}</select>
     <label class="f">Валюта</label><select id="a_cur">${['UAH','USD','EUR','PLN','GBP'].map(c => `<option ${a && a.currency===c?'selected':''}>${c}</option>`).join('')}</select>
     <label class="f">Поточний залишок</label><input id="a_bal" type="number" step="0.01" inputmode="decimal" value="${a && a.balance != null ? a.balance : ''}">
+    <label class="f">Кредитний ліміт (якщо кредитна картка)</label><input id="a_lim" type="number" step="0.01" inputmode="decimal" value="${a && a.creditLimit ? a.creditLimit : ''}" placeholder="0">
+    <div class="hint small" style="margin-top:4px">Залишок — це власні кошти. Мінус означає борг за кредиткою.</div>
     <label class="f"><input type="checkbox" id="a_in" ${!a || a.inTotal !== false ? 'checked' : ''} style="width:auto"> Враховувати в загальному капіталі</label>
     <div class="btns"><button class="btn" onclick="saveAcc('${a ? a.id : ''}')">Зберегти</button></div>
     ${a ? `<div class="btns"><button class="btn sec" onclick="UI.f={acc:'${a.id}',cat:'',q:'',type:'',all:true};closeSheet();go('tx')">Операції рахунку</button></div>
@@ -1358,7 +1401,7 @@ function saveAcc(id){
   if (!a) { a = {id: uid(), importKey: ''}; S.accounts.push(a); }
   const newBal = balV === '' ? null : parseFloat(balV);
   if (newBal !== a.balance) a.balanceDate = isoLocal(new Date());
-  Object.assign(a, {name, bank: $('#a_bank').value, currency: $('#a_cur').value, balance: newBal, inTotal: $('#a_in').checked});
+  Object.assign(a, {creditLimit: parseFloat($('#a_lim').value) || 0, name, bank: $('#a_bank').value, currency: $('#a_cur').value, balance: newBal, inTotal: $('#a_in').checked});
   save(); closeSheet(); render(); haptic('medium');
 }
 async function delAcc(id){
@@ -1427,7 +1470,7 @@ async function onFiles(files){
       if (!rows.length || rows.length < 2) throw new Error('не знайдено таблиці операцій');
       const {hi, map} = detectHeader(rows);
       const pdf = /\.pdf$/i.test(f.name);
-      list.push({name: f.name, rows, hi, map, bank: pdf && guessBank(rows[hi] || [], f.name) === 'other' ? 'privat' : guessBank(rows[hi] || [], f.name), invert: false, targets: {}, forceCur: meta.currency || ''});
+      list.push({name: f.name, rows, hi, map, bank: pdf && guessBank(rows[hi] || [], f.name) === 'other' ? 'privat' : guessBank(rows[hi] || [], f.name), invert: false, targets: {}, forceCur: meta.currency || '', meta});
     } catch(e) { toast(`${f.name}: ${e.message}`); }
   }
   if (!list.length) return;
@@ -1438,7 +1481,8 @@ function impGroups(F){
   const recs = extract(F.rows, F.hi, F.map, F.invert);
   const groups = {};
   for (const r of recs) {
-    const card = r.card ? r.card.replace(/\D/g, '').slice(-4) || r.card.slice(-8) : '';
+    const cm_ = r.card ? r.card.match(/[*xх•]+\s*(\d{2,4})/i) : null;
+    const card = r.card ? (cm_ ? cm_[1] : r.card.replace(/\D/g, '').slice(-4) || r.card.slice(-8)) : '';
     const c = r.currency || F.forceCur || '';
     const k = card + '|' + c;
     (groups[k] ||= {card, currency: c, recs: []}).recs.push(r);
@@ -1553,6 +1597,7 @@ function doImport(){
       added++;
     }
     if (latest && (!acc.balanceDate || latest.date >= acc.balanceDate)) { acc.balance = latest.balance; acc.balanceDate = latest.date; }
+    if (F.meta && F.meta.creditLimit) acc.creditLimit = F.meta.creditLimit;
   }
   save(); haptic('medium');
   toast(`Додано ${added} операцій${dup ? `, пропущено дублікатів: ${dup}` : ''}`);
