@@ -137,6 +137,8 @@ h2.row{display:flex}
 .cbar{display:flex;height:12px;border-radius:7px;overflow:hidden;gap:2px}
 .cbar i{display:block;height:100%}
 .curb{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:none}
+.cv{font-size:11px;font-weight:500;color:var(--link);opacity:.85;margin-top:1px;white-space:nowrap}
+.cv.l{font-size:13px;text-align:left}
 </style>
 </head>
 <body>
@@ -354,6 +356,9 @@ const rate = cur => cur === 'UAH' ? 1 : (S.rates[cur] || 0);
 const toUAH = (a, cur) => a * rate(cur);
 const conv = (a, from, to) => from === to ? a : toUAH(a, from) / (rate(to) || 1);
 
+// the other two of ₴ / $ / € for an amount in its own currency
+const conv3 = (amount, cur, dec = true) => ['UAH','USD','EUR'].filter(c => c !== cur).map(c => money(Math.abs(conv(amount, cur, c)), c, dec)).join(' · ');
+const cv = (amount, cur, cls = 'cv') => amount == null || isNaN(amount) ? '' : `<div class="${cls}">${conv3(amount, cur)}</div>`;
 const DCUR = () => (S.disp && S.disp.cur) || 'UAH';
 function D(v, dec){ const c = DCUR(); return money(c === 'UAH' ? v : conv(v, 'UAH', c), c, dec); }
 const dv = v => conv(v, 'UAH', DCUR());
@@ -889,7 +894,7 @@ function currencyBlock(){
   return `<h2>Залишки за валютами</h2><div class="card">
     <div class="cbar">${list.map(x => `<i style="width:${Math.max(0, x.u)/tot*100}%;background:${COL[x.c] || '#64748b'}"></i>`).join('')}</div>
     ${list.map(x => `<div class="row" style="margin-top:10px" onclick="go('acc')"><div class="curb" style="background:${COL[x.c] || '#64748b'}22;color:${COL[x.c] || '#64748b'}">${SYM[x.c] || x.c}</div>
-      <div class="grow"><div class="mid" style="font-size:17px">${money(x.v, x.c, true)}</div><div class="hint small">${x.n} рах. · ${Math.round(Math.max(0, x.u)/tot*100)}% капіталу${x.c !== DCUR() ? ' · ≈ ' + D(x.u) : ''}</div></div></div>`).join('')}
+      <div class="grow"><div class="mid" style="font-size:17px">${money(x.v, x.c, true)}</div>${cv(x.v, x.c, 'cv l')}<div class="hint small">${x.n} рах. · ${Math.round(Math.max(0, x.u)/tot*100)}% капіталу</div></div></div>`).join('')}
   </div>`;
 }
 
@@ -1168,7 +1173,7 @@ acc(){
     const last = S.tx.filter(t => t.acc === a.id).reduce((m, t) => t.date > m ? t.date : m, '');
     const n = S.tx.filter(t => t.acc === a.id).length;
     return `<div class="it" onclick="accSheet('${a.id}')"><div class="grow"><div class="ellip">${esc(a.name)} ${a.inTotal===false?'<span class="hint small">(не в сумі)</span>':''}</div><div class="hint small">${n} операцій${last ? ' · остання ' + last.slice(0,10).split('-').reverse().join('.') : ''}${a.balanceDate ? ' · залишок на ' + a.balanceDate.slice(0,10).split('-').reverse().join('.') : ''}</div></div>
-      <div class="amt">${money(a.balance, a.currency, true)}${a.currency !== DCUR() && a.balance != null ? `<div class="hint small">${D(toUAH(a.balance, a.currency))}</div>` : ''}</div></div>`;
+      <div class="amt">${money(a.balance, a.currency, true)}${a.balance != null ? cv(a.balance, a.currency) : ''}</div></div>`;
   }).join('')}</div>`).join('');
   return `<div class="card"><div class="hint">Разом на рахунках</div><div class="big">${D(T.uah)}</div><div class="hint">≈ ${others(T.uah)}</div></div>
   <div class="btns"><button class="btn" onclick="$('#fileIn').click()">📥 Імпорт виписки</button><button class="btn sec" onclick="monoSheet()">🐈‍⬛ Monobank</button></div>
@@ -1212,11 +1217,10 @@ more(){
 
 function txRow(t){
   const c = catInfo(t.cat), a = accById(t.acc);
-  const op = t.opCurrency && t.opCurrency !== t.currency && t.opAmount ? `<div class="hint small">${money(t.opAmount, t.opCurrency, true)}</div>`
-    : t.currency !== DCUR() ? `<div class="hint small">≈ ${D(toUAH(t.amount, t.currency), true)}</div>` : '';
+  const op = (t.opCurrency && t.opCurrency !== t.currency && t.opAmount ? `<div class="hint small">оплата ${money(Math.abs(t.opAmount), t.opCurrency, true)}</div>` : '') + cv(t.amount, t.currency);
   const tr = catKind(t.cat) === 'tr';
   return `<div class="it" onclick="txSheet('${t.id}')"><div class="ico" style="background:${c.c}22">${c.i}</div>
-    <div class="grow"><div class="ellip">${esc(t.desc || '(без опису)')}</div><div class="hint small ellip">${esc(t.cat)} · ${esc(a ? a.name : '?')}${t.note ? ' · ' + esc(t.note) : ''}</div></div>
+    <div class="grow"><div class="ellip">${esc(String(t.desc || '(без опису)').replace(/^card charge\s*\((.*)\)$/i, '$1'))}</div><div class="hint small ellip">${esc(t.cat)} · ${esc(a ? a.name : '?')}${t.note ? ' · ' + esc(t.note) : ''}</div></div>
     <div class="amt ${t.amount > 0 && !tr ? 'pos' : tr ? 'hint' : ''}">${t.amount > 0 ? '+' : ''}${money(t.amount, t.currency, true)}${op}</div></div>`;
 }
 
@@ -1228,7 +1232,7 @@ function recBlock(full, kind='exp'){
   return `<h2>${inc ? 'Регулярні доходи' : 'Повторювані платежі'} · ${MONTHS[UI.m]}</h2><div class="card list" style="padding:2px 14px">
     ${items.map(({r, s}) => `<div class="it" onclick="recSheet('${r.id}')"><div class="ico" style="background:${catInfo(r.cat).c}22">${catInfo(r.cat).i}</div>
       <div class="grow"><div class="ellip">${esc(r.name)}</div><div class="hint small">${r.day} числа · ${esc(r.cat)}</div></div>
-      <div class="amt ${inc ? 'pos' : ''}">${inc ? '+' : ''}${money(r.amount, r.currency)}<div>${s.st === 'ok' ? `<span class="pill ok">${inc ? 'отримано' : 'оплачено'}</span>` : s.st === 'late' ? `<span class="pill late">${inc ? 'затримується' : 'прострочено'}</span>` : `<span class="pill due">${s.days === 0 ? 'сьогодні' : 'через ' + s.days + ' дн'}</span>`}</div></div></div>`).join('')}
+      <div class="amt ${inc ? 'pos' : ''}">${inc ? '+' : ''}${money(r.amount, r.currency)}${cv(r.amount, r.currency)}<div>${s.st === 'ok' ? `<span class="pill ok">${inc ? 'отримано' : 'оплачено'}</span>` : s.st === 'late' ? `<span class="pill late">${inc ? 'затримується' : 'прострочено'}</span>` : `<span class="pill due">${s.days === 0 ? 'сьогодні' : 'через ' + s.days + ' дн'}</span>`}</div></div></div>`).join('')}
     <div class="row between" style="padding:10px 0"><span class="hint small">${inc ? 'Ще очікується цього місяця' : 'Ще сплатити цього місяця'}</span><b>${D(left)}</b></div></div>`;
 }
 
@@ -1265,6 +1269,7 @@ function txSheet(id, sign){
     const a = accById(t.acc);
     openSheet(`<h3>${esc(t.desc || 'Операція')}</h3>
       <div class="big ${t.amount>0?'pos':''}" style="font-size:26px">${t.amount>0?'+':''}${money(t.amount, t.currency, true)}</div>
+      ${cv(t.amount, t.currency, 'cv l')}
       <div class="hint small">${t.date.replace('T',' ').slice(0,16).split(' ').map((p,i)=>i?p:p.split('-').reverse().join('.')).join(' ')} · ${esc(a ? a.name : '')}${t.mcc ? ' · MCC ' + t.mcc : ''}${t.opCurrency && t.opCurrency !== t.currency ? ' · ' + money(t.opAmount, t.opCurrency, true) : ''}${t.bankCat ? ' · ' + esc(t.bankCat) : ''}</div>
       <label class="f">Категорія</label>${catSelect(t.cat)}
       <label class="f"><input type="checkbox" id="f_all" style="width:auto"> Застосувати до всіх схожих (ключове слово):</label>
