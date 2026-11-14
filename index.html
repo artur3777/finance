@@ -111,13 +111,41 @@ h2.row{display:flex}
 .nt{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
 .nt i{width:60%;max-width:26px;border-radius:6px 6px 2px 2px;min-height:3px;display:block}
 .nv{font-weight:600;font-size:11px}
+.fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));width:54px;height:54px;border-radius:50%;border:0;background:var(--btn);color:var(--btnt);font-size:28px;line-height:1;box-shadow:0 6px 18px color-mix(in srgb,var(--btn) 40%,transparent);z-index:6;cursor:pointer}
+.hseg{display:inline-flex;background:rgba(255,255,255,.16);border-radius:999px;padding:2px}
+.hseg button{border:0;background:none;color:#fff;font:inherit;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;cursor:pointer;opacity:.75}
+.hseg button.on{background:#fff;color:#1e3a8a;opacity:1}
+.tri{font-size:11px;color:var(--hint);font-weight:500;margin-top:2px}
+.tab{font-size:10px} .tab b{font-size:19px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2 h2{margin-top:18px}
+.cmp{margin:8px 0;cursor:pointer}
+.cb{height:8px;border-radius:5px;background:color-mix(in srgb,var(--hint) 14%,transparent);margin-top:4px;position:relative;overflow:visible}
+.cb.thin{height:5px}
+.cb i{display:block;height:100%;border-radius:5px}
+.cb s{position:absolute;top:-3px;width:2px;height:11px;background:var(--text);opacity:.6;border-radius:1px}
+.stk{display:flex;gap:8px;height:140px}
+.sc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.st{flex:1;width:70%;max-width:30px;display:flex;flex-direction:column-reverse;border-radius:6px;overflow:hidden}
+.st i{display:block;width:100%}
+.legend2{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--hint)}
+.legend2 span{display:inline-flex;align-items:center;gap:5px}
+.wbars{display:flex;gap:4px;height:90px}
+.wc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.wt{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.wt i{width:70%;border-radius:4px 4px 1px 1px;background:var(--btn);min-height:2px;display:block}
+.cbar{display:flex;height:12px;border-radius:7px;overflow:hidden;gap:2px}
+.cbar i{display:block;height:100%}
+.curb{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:none}
 </style>
 </head>
 <body>
 <div id="view"></div>
+<button class="fab" id="fab" onclick="quickAdd()" aria-label="Додати">＋</button>
 <nav class="tabs">
   <button class="tab" data-t="home" onclick="go('home')"><b>📊</b>Огляд</button>
   <button class="tab" data-t="tx" onclick="go('tx')"><b>🧾</b>Операції</button>
+  <button class="tab" data-t="an" onclick="go('an')"><b>📈</b>Аналітика</button>
   <button class="tab" data-t="rec" onclick="go('rec')"><b>🔁</b>Платежі</button>
   <button class="tab" data-t="acc" onclick="go('acc')"><b>🏦</b>Рахунки</button>
   <button class="tab" data-t="more" onclick="go('more')"><b>⚙️</b>Ще</button>
@@ -313,6 +341,7 @@ function defaults(){
     rates:{USD:41.5,EUR:48,PLN:11.3,GBP:55,at:0,manual:false},
     plan:{salary:53000,salaryCur:'UAH',biz:2000,bizCur:'USD',save:0},
     goals:[],
+    disp:{cur:'UAH',triple:false},
   };
 }
 let saveT;
@@ -324,6 +353,14 @@ const accById = id => S.accounts.find(a => a.id === id);
 const rate = cur => cur === 'UAH' ? 1 : (S.rates[cur] || 0);
 const toUAH = (a, cur) => a * rate(cur);
 const conv = (a, from, to) => from === to ? a : toUAH(a, from) / (rate(to) || 1);
+
+const DCUR = () => (S.disp && S.disp.cur) || 'UAH';
+function D(v, dec){ const c = DCUR(); return money(c === 'UAH' ? v : conv(v, 'UAH', c), c, dec); }
+const dv = v => conv(v, 'UAH', DCUR());
+const others = v => ['UAH','USD','EUR'].filter(c => c !== DCUR()).map(c => money(conv(v, 'UAH', c), c)).join(' · ');
+const D3 = (v, cls='tri') => D(v) + (S.disp && S.disp.triple ? `<div class="${cls}">${others(v)}</div>` : '');
+function setDisp(c){ S.disp = {...(S.disp || {}), cur: c}; save(); haptic(); render(); }
+function toggleTri(){ S.disp = {...(S.disp || {cur:'UAH'}), triple: !(S.disp && S.disp.triple)}; save(); haptic(); render(); toast(S.disp.triple ? 'Суми показуються у трьох валютах' : 'Одна валюта'); }
 
 /* ============ Categorisation ============ */
 function autoCat(desc, amount, mcc, bankCat){
@@ -640,7 +677,7 @@ function recStatus(r, y, m){
   if (r.paid && r.paid[key]) return {st:'ok', due, tx:null, manual:true};
   const amt = Math.abs(r.amount), tol = Math.max(1, amt * 0.03), mt = (r.match || '').toLowerCase();
   const tx = S.tx.find(t => {
-    if (t.amount >= 0 || !inMonth(t, y, m)) return false;
+    if ((r.kind === 'inc' ? t.amount <= 0 : t.amount >= 0) || !inMonth(t, y, m)) return false;
     const d = +t.date.slice(8, 10);
     if (mt && t.desc.toLowerCase().includes(mt)) return Math.abs(d - day) <= 10;
     if (Math.abs(d - day) > 5) return false;
@@ -696,10 +733,13 @@ let LAST_AVGNET = 0;
 function forecast(){
   const now = new Date(), y = now.getFullYear(), m = now.getMonth(), d = now.getDate(), D = dim(y, m);
   const T = totals(), st = monthStats(y, m), plan = S.plan || {};
-  const planInc = toUAH(plan.salary || 0, plan.salaryCur || 'UAH') + toUAH(plan.biz || 0, plan.bizCur || 'USD');
-  const recTot = S.recurring.reduce((s, r) => s + toUAH(r.amount, r.currency), 0);
+  const recInc = S.recurring.filter(r => r.kind === 'inc');
+  const planInc = recInc.length ? recInc.reduce((s, r) => s + toUAH(r.amount, r.currency), 0)
+    : toUAH(plan.salary || 0, plan.salaryCur || 'UAH') + toUAH(plan.biz || 0, plan.bizCur || 'USD');
+  const recExp = S.recurring.filter(r => r.kind !== 'inc');
+  const recTot = recExp.reduce((s, r) => s + toUAH(r.amount, r.currency), 0);
   let recPaid = 0, recUnpaid = 0;
-  for (const r of S.recurring) { const v = toUAH(r.amount, r.currency); if (recStatus(r, y, m).st === 'ok') recPaid += v; else recUnpaid += v; }
+  for (const r of recExp) { const v = toUAH(r.amount, r.currency); if (recStatus(r, y, m).st === 'ok') recPaid += v; else recUnpaid += v; }
   const variable = Math.max(0, st.exp - recPaid);
   const daysLeft = D - d + 1;
   const hist = [];
@@ -761,7 +801,7 @@ function lineChart(pts){
 function upcomingPayments(days){
   const today = new Date(); today.setHours(0,0,0,0);
   const out = [];
-  for (const r of S.recurring) for (let k = 0; k <= 1; k++) {
+  for (const r of S.recurring.filter(r => r.kind !== 'inc')) for (let k = 0; k <= 1; k++) {
     const y = today.getFullYear(), m = today.getMonth() + k, d = new Date(y, m, 1);
     const yy = d.getFullYear(), mm = d.getMonth();
     const due = new Date(yy, mm, Math.min(r.day, dim(yy, mm)));
@@ -810,11 +850,55 @@ function saveGoal(id){
 }
 async function delGoal(id){ if (!(await ask('Видалити ціль?'))) return; S.goals = S.goals.filter(x => x.id !== id); save(); closeSheet(); render(); }
 
+function groupBars(months){
+  const W = 320, H = 150, PT = 16, PB = 4;
+  const vals = months.map(x => ({i: dv(x.inc), e: dv(x.exp), n: dv(x.inc - x.exp)}));
+  const mx = Math.max(1, ...vals.map(v => Math.max(v.i, v.e))), mn = Math.min(0, ...vals.map(v => v.n));
+  const y = v => PT + (H - PT - PB) * (1 - (v - mn) / (mx - mn));
+  const bw = (W / months.length);
+  const bars = vals.map((v, k) => { const x0 = k * bw + bw * 0.18, w = bw * 0.3;
+    return `<rect x="${x0}" y="${y(v.i)}" width="${w}" height="${Math.max(1, y(0) - y(v.i))}" rx="3" fill="var(--green)"/><rect x="${x0 + w + 2}" y="${y(v.e)}" width="${w}" height="${Math.max(1, y(0) - y(v.e))}" rx="3" fill="var(--red)" opacity=".85"/>`; }).join('');
+  const pts = vals.map((v, k) => `${(k * bw + bw / 2).toFixed(1)},${y(v.n).toFixed(1)}`);
+  const lbls = vals.map((v, k) => v.n ? `<text x="${k * bw + bw / 2}" y="${Math.min(y(v.n), y(Math.max(v.i, v.e))) - 5}" text-anchor="middle" font-size="9" font-weight="600" fill="${v.n < 0 ? 'var(--red)' : 'currentColor'}">${v.n > 0 ? '+' : ''}${kfmt(v.n)}</text>` : '').join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;color:var(--text)">
+    <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--sep)"/>${bars}
+    <polyline points="${pts.join(' ')}" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linejoin="round"/>
+    ${vals.map((v, k) => `<circle cx="${k * bw + bw / 2}" cy="${y(v.n)}" r="3" fill="var(--amber)"/>`).join('')}${lbls}</svg>
+    <div class="xl">${months.map(x => `<span>${MSHORT[x.m]}</span>`).join('')}</div>`;
+}
+function multiLine(series, days){
+  const W = 320, H = 140, P = 6;
+  const all = series.flatMap(s => s.v).map(dv); const mx = Math.max(1, ...all);
+  const x = i => P + (W - 2 * P) * i / Math.max(1, days - 1), y = v => H - P - (H - 2 * P) * dv(v) / mx;
+  const paths = series.filter(s => s.v.length).map(s => `<path d="${s.v.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}" fill="none" stroke="${s.c}" stroke-width="${s.dash ? 1.8 : 2.6}" ${s.dash ? 'stroke-dasharray="4 4"' : ''} stroke-linejoin="round"/>`).join('');
+  const main = series[series.length - 1], last = main.v.length - 1;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;color:var(--text)">
+    ${[0.25,0.5,0.75].map(k => `<line x1="0" x2="${W}" y1="${P + (H-2*P)*k}" y2="${P + (H-2*P)*k}" stroke="var(--sep)"/>`).join('')}${paths}
+    ${last >= 0 ? `<circle cx="${x(last)}" cy="${y(main.v[last])}" r="4" fill="var(--btn)" stroke="var(--card)" stroke-width="2"/><text x="${x(last)}" y="${y(main.v[last]) - 8}" text-anchor="${last > days * 0.7 ? 'end' : 'middle'}" font-size="10" font-weight="700" fill="currentColor">${kfmt(dv(main.v[last]))}</text>` : ''}
+  </svg>
+  <div class="xl"><span style="text-align:left">1</span><span>10</span><span>20</span><span style="text-align:right">${days}</span></div>
+  <div class="row small hint" style="gap:12px;margin-top:6px;flex-wrap:wrap">${series.map(s => `<span><span class="dash" style="border-color:${s.c};${s.dash ? '' : 'border-top-style:solid;border-top-width:3px'}"></span> ${s.n}${s.v.length ? ': ' + D(s.v[Math.min(s.v.length - 1, last >= 0 ? last : 0)]) : ''}</span>`).join('')}</div>`;
+}
+function currencyBlock(){
+  const by = {};
+  for (const a of S.accounts) { if (a.inTotal === false || a.balance == null) continue; (by[a.currency] ||= {v: 0, n: 0}); by[a.currency].v += a.balance; by[a.currency].n++; }
+  const list = Object.entries(by).map(([c, x]) => ({c, v: x.v, n: x.n, u: toUAH(x.v, c)})).sort((a, b) => b.u - a.u);
+  if (!list.length) return '';
+  const tot = list.reduce((s, x) => s + Math.max(0, x.u), 0) || 1;
+  const COL = {UAH: '#3b82f6', USD: '#22c55e', EUR: '#f59e0b', PLN: '#ec4899', GBP: '#a855f7'};
+  return `<h2>Залишки за валютами</h2><div class="card">
+    <div class="cbar">${list.map(x => `<i style="width:${Math.max(0, x.u)/tot*100}%;background:${COL[x.c] || '#64748b'}"></i>`).join('')}</div>
+    ${list.map(x => `<div class="row" style="margin-top:10px" onclick="go('acc')"><div class="curb" style="background:${COL[x.c] || '#64748b'}22;color:${COL[x.c] || '#64748b'}">${SYM[x.c] || x.c}</div>
+      <div class="grow"><div class="mid" style="font-size:17px">${money(x.v, x.c, true)}</div><div class="hint small">${x.n} рах. · ${Math.round(Math.max(0, x.u)/tot*100)}% капіталу${x.c !== DCUR() ? ' · ≈ ' + D(x.u) : ''}</div></div></div>`).join('')}
+  </div>`;
+}
+
 /* ============ Views ============ */
 function go(t){ UI.tab = t; UI.limit = 200; haptic(); render(); window.scrollTo(0, 0); }
 function render(){
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === UI.tab));
   $('#view').innerHTML = VIEWS[UI.tab]();
+  $('#fab').style.display = ['home','tx','rec','an'].includes(UI.tab) ? '' : 'none';
 }
 function shiftMonth(d){ let m = UI.m + d, y = UI.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } UI.y = y; UI.m = m; haptic(); render(); }
 const monthNav = () => `<div class="mnav"><button onclick="shiftMonth(-1)">‹</button><div class="t">${MONTHS[UI.m]} ${UI.y}</div><button onclick="shiftMonth(1)">›</button></div>`;
@@ -847,8 +931,8 @@ home(){
   const usd = T.uah / (rate('USD') || 1);
   // capital history + forecast
   const F = forecast();
-  const hist = capitalHistory(UI.range || 6);
-  const pts = hist.concat(F.months.slice(0, UI.range === 12 ? 6 : 3).map((v, i) => { const d = new Date(cy, cm + i + 1, 1); return {l: MSHORT[d.getMonth()], v, f: true}; }));
+  const hist = capitalHistory(UI.range || 6).map(p => ({...p, v: dv(p.v)}));
+  const pts = hist.concat(F.months.slice(0, UI.range === 12 ? 6 : 3).map(dv).map((v, i) => { const d = new Date(cy, cm + i + 1, 1); return {l: MSHORT[d.getMonth()], v, f: true}; }));
   const prevCap = capitalAtEnd(cm === 0 ? cy - 1 : cy, cm === 0 ? 11 : cm - 1);
   const dCap = T.uah - prevCap;
   // savings
@@ -870,28 +954,30 @@ home(){
   const nb = []; for (let i = 5; i >= 0; i--) { let m = UI.m - i, y = UI.y; while (m < 0) { m += 12; y--; } const s = monthStats(y, m); nb.push({y, m, v: s.inc - s.exp}); }
   const nmx = Math.max(1, ...nb.map(x => Math.abs(x.v)));
   const upcoming = upcomingPayments(10);
-  const banks = Object.entries(T.by).sort((a,b) => b[1]-a[1]).map(([b, v]) => `<span class="hchip">${BANKS[b]?.i || '🏦'} ${money(v)}</span>`).join('');
+  const banks = Object.entries(T.by).sort((a,b) => b[1]-a[1]).map(([b, v]) => `<span class="hchip">${BANKS[b]?.i || '🏦'} ${D(v)}</span>`).join('');
   const qEsc = s => esc(s).replace(/'/g, "\\'");
 
   return `
   <div class="hero">
-    <div class="row between"><span style="opacity:.8">Загальний капітал</span><button class="hbtn" onclick="planSheet()">🎯 План</button></div>
-    <div class="big" style="font-size:34px;margin-top:2px">${money(T.uah)}</div>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:2px">
-      <span class="delta ${dCap < 0 ? 'dn' : 'up'}">${dCap < 0 ? '▼' : '▲'} ${money(Math.abs(dCap))} за місяць</span>
-      <span style="opacity:.8;font-size:13px">≈ ${money(usd,'USD')}</span>
+    <div class="row between"><span style="opacity:.8">Загальний капітал</span><span class="row" style="gap:6px"><span class="hseg">${['UAH','USD','EUR'].map(c => `<button class="${DCUR()===c?'on':''}" onclick="setDisp('${c}')">${SYM[c]}</button>`).join('')}<button class="${S.disp && S.disp.triple ? 'on' : ''}" onclick="toggleTri()" title="Три валюти">×3</button></span><button class="hbtn" onclick="planSheet()">🎯</button></span></div>
+    <div class="big" style="font-size:34px;margin-top:2px">${D(T.uah)}</div>
+    <div style="opacity:.85;font-size:13px">≈ ${others(T.uah)}</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
+      <span class="delta ${dCap < 0 ? 'dn' : 'up'}">${dCap < 0 ? '▼' : '▲'} ${D(Math.abs(dCap))} за місяць</span>
     </div>
     <div style="margin-top:10px">${banks}</div>
   </div>
 
   <div class="kpis">
-    <div class="kpi"><div class="lbl">💰 Заощаджено ${isCur ? 'цього місяця' : MONTHS[UI.m]}</div><div class="val ${net < 0 ? 'red' : 'pos'}">${net > 0 ? '+' : ''}${money(net)}</div><div class="sub">${rateSav == null ? 'доходів ще немає' : Math.round(rateSav * 100) + '% від доходів'}</div></div>
-    ${isCur ? `<div class="kpi"><div class="lbl">🟢 Можна витрачати</div><div class="val">${money(Math.max(0, F.perDay))}<span class="sub"> / день</span></div><div class="sub">ще ${F.daysLeft} дн. до кінця місяця</div></div>`
-      : `<div class="kpi"><div class="lbl">📉 Витрати</div><div class="val">${money(st.exp)}</div><div class="sub">доходи ${money(st.inc)}</div></div>`}
-    <div class="kpi"><div class="lbl">📅 Прогноз на 1 ${MONTHS_GEN[(cm + 1) % 12]}</div><div class="val">${money(F.endOfMonth)}</div><div class="sub">${F.endOfMonth - T.uah >= 0 ? '+' : ''}${money(F.endOfMonth - T.uah)} до сьогодні</div></div>
-    <div class="kpi"><div class="lbl">🚀 Через 12 місяців</div><div class="val">${money(F.months[11])}</div><div class="sub">${F.avgNet >= 0 ? '+' : ''}${money(F.avgNet)}/міс · ${F.src}</div></div>
+    <div class="kpi"><div class="lbl">💰 Заощаджено ${isCur ? 'цього місяця' : MONTHS[UI.m]}</div><div class="val ${net < 0 ? 'red' : 'pos'}">${net > 0 ? '+' : ''}${D3(net)}</div><div class="sub">${rateSav == null ? 'доходів ще немає' : Math.round(rateSav * 100) + '% від доходів'}</div></div>
+    ${isCur ? `<div class="kpi"><div class="lbl">🟢 Можна витрачати</div><div class="val">${D(Math.max(0, F.perDay))}<span class="sub"> / день</span>${S.disp && S.disp.triple ? `<div class="tri">${others(Math.max(0, F.perDay))}</div>` : ''}</div><div class="sub">ще ${F.daysLeft} дн. до кінця місяця</div></div>`
+      : `<div class="kpi"><div class="lbl">📉 Витрати</div><div class="val">${D(st.exp)}</div><div class="sub">доходи ${D(st.inc)}</div></div>`}
+    <div class="kpi"><div class="lbl">📅 Прогноз на 1 ${MONTHS_GEN[(cm + 1) % 12]}</div><div class="val">${D3(F.endOfMonth)}</div><div class="sub">${F.endOfMonth - T.uah >= 0 ? '+' : ''}${D(F.endOfMonth - T.uah)} до сьогодні</div></div>
+    <div class="kpi"><div class="lbl">🚀 Через 12 місяців</div><div class="val">${D3(F.months[11])}</div><div class="sub">${F.avgNet >= 0 ? '+' : ''}${D(F.avgNet)}/міс · ${F.src}</div></div>
   </div>
 
+  <div class="btns" style="margin:2px 0 4px"><button class="btn sm sec" style="flex:1" onclick="txSheet(null,1)">＋ Дохід</button><button class="btn sm sec" style="flex:1" onclick="txSheet(null,-1)">− Витрата</button><button class="btn sm sec" style="flex:1" onclick="go('an')">📈 Аналітика</button></div>
+  ${currencyBlock()}
   <h2 class="row between"><span>Динаміка капіталу</span><span class="seg"><button class="${(UI.range||6)===6?'on':''}" onclick="UI.range=6;render()">6 міс</button><button class="${UI.range===12?'on':''}" onclick="UI.range=12;render()">12 міс</button></span></h2>
   <div class="card">${pts.length >= 2 ? lineChart(pts) : '<div class="empty">Замало даних для графіка</div>'}
     <div class="row small hint" style="gap:14px;margin-top:6px"><span><span class="dot" style="display:inline-block;background:var(--btn)"></span> факт</span><span><span class="dash"></span> прогноз</span><span class="grow" style="text-align:right">${F.src}</span></div>
@@ -904,24 +990,123 @@ home(){
       <div class="small hint">${pct >= 1 ? '✅ Ціль досягнуто!' : monthsLeft ? `до ${fmtMonth(g.deadline)}: відкладати ${money(perMonth, g.currency)}/міс` : eta ? `за поточним темпом — ${eta}` : 'вкажіть дедлайн, щоб бачити план'}</div></div></div></div>`).join('')
     : `<div class="card"><div class="row"><div style="font-size:30px">🎯</div><div class="grow small">Додайте ціль — подушку безпеки, відпустку чи внесок за житло. Прив'яжіть рахунки або банки Monobank, і прогрес рахуватиметься сам.</div></div></div>`}
   ${jars.length ? `<div class="card list" style="padding:2px 14px">${jars.map(a => `<div class="it" onclick="accSheet('${a.id}')"><div class="ico" style="background:#f59e0b22">🫙</div><div class="grow ellip">${esc(a.name.replace('🫙 ',''))}</div><div class="amt">${money(a.balance, a.currency)}</div></div>`).join('')}</div>` : ''}
-  ${S.plan && S.plan.save ? `<div class="card"><div class="row between small"><span>Ціль заощаджень на місяць</span><b>${money(Math.max(0,net))} / ${money(S.plan.save)}</b></div><div class="bar"><i style="width:${Math.min(100, Math.max(0, net / S.plan.save * 100))}%;background:var(--green)"></i></div></div>` : ''}
+  ${S.plan && S.plan.save ? `<div class="card"><div class="row between small"><span>Ціль заощаджень на місяць</span><b>${D(Math.max(0,net))} / ${D(S.plan.save)}</b></div><div class="bar"><i style="width:${Math.min(100, Math.max(0, net / S.plan.save * 100))}%;background:var(--green)"></i></div></div>` : ''}
 
   ${upcoming.length ? `<h2>Найближчі платежі</h2><div class="card list" style="padding:2px 14px">${upcoming.map(u => `<div class="it" onclick="recSheet('${u.r.id}')"><div class="datebox"><b>${u.date.getDate()}</b><span>${MSHORT[u.date.getMonth()]}</span></div><div class="grow"><div class="ellip">${esc(u.r.name)}</div><div class="small hint">${u.days === 0 ? 'сьогодні' : u.days === 1 ? 'завтра' : 'через ' + u.days + ' дн'}</div></div><div class="amt">${money(u.r.amount, u.r.currency)}</div></div>`).join('')}
-    <div class="row between" style="padding:10px 0"><span class="hint small">Разом за 10 днів</span><b>${money(upcoming.reduce((s,u)=>s+toUAH(u.r.amount,u.r.currency),0))}</b></div></div>` : ''}
+    <div class="row between" style="padding:10px 0"><span class="hint small">Разом за 10 днів</span><b>${D(upcoming.reduce((s,u)=>s+toUAH(u.r.amount,u.r.currency),0))}</b></div></div>` : ''}
 
   ${monthNav()}
   <div class="card">
-    <div class="row between"><div><div class="hint small">Доходи</div><div class="mid pos">${money(st.inc)}</div></div><div style="text-align:right"><div class="hint small">Витрати</div><div class="mid">${money(st.exp)}</div></div></div>
+    <div class="row between"><div><div class="hint small">Доходи</div><div class="mid pos">${D(st.inc)}</div></div><div style="text-align:right"><div class="hint small">Витрати</div><div class="mid">${D(st.exp)}</div></div></div>
     <div class="bar" style="height:8px;margin-top:10px"><i style="width:${st.inc > 0 ? Math.min(100, st.exp / st.inc * 100) : (st.exp ? 100 : 0)}%;background:${st.exp > st.inc ? 'var(--red)' : 'var(--amber)'}"></i></div>
     <div class="small hint" style="margin-top:6px">${st.inc > 0 ? `Витрачено ${Math.round(st.exp / st.inc * 100)}% доходів` : ''}${pace != null ? ` · ${pace > 0 ? '▲' : '▼'} ${Math.abs(Math.round(pace * 100))}% проти ${MONTHS_GEN2[pm]} на ${day}-те число` : ''}</div>
   </div>
 
   <h2>На що йдуть кошти</h2>
-  <div class="card">${top.length ? `<div class="donut">${donut(top, expTotal)}<div class="legend grow">${top.map(x => `<div class="lg" onclick="${x.n==='Решта'?'':`UI.f={acc:'',cat:'${qEsc(x.n)}',q:'',type:'',all:false};go('tx')`}"><span class="dot" style="background:${x.c}"></span><span class="grow ellip small">${esc(x.n)}</span><span class="small"><b>${money(x.v)}</b> <span class="hint">${Math.round(x.v/expTotal*100)}%</span></span></div>`).join('')}</div></div>` : `<div class="empty">Немає витрат за цей місяць</div>`}</div>
+  <div class="card">${top.length ? `<div class="donut">${donut(top, expTotal)}<div class="legend grow">${top.map(x => `<div class="lg" onclick="${x.n==='Решта'?'':`UI.f={acc:'',cat:'${qEsc(x.n)}',q:'',type:'',all:false};go('tx')`}"><span class="dot" style="background:${x.c}"></span><span class="grow ellip small">${esc(x.n)}</span><span class="small"><b>${D(x.v)}</b> <span class="hint">${Math.round(x.v/expTotal*100)}%</span></span></div>`).join('')}</div></div>` : `<div class="empty">Немає витрат за цей місяць</div>`}</div>
 
   <h2>Заощадження по місяцях</h2>
-  <div class="card"><div class="nbars">${nb.map(x => `<div class="nc" onclick="UI.y=${x.y};UI.m=${x.m};render()"><div class="nv small ${x.v<0?'red':'pos'}">${x.v ? (x.v > 0 ? '+' : '−') + kfmt(Math.abs(x.v)) : '0'}</div><div class="nt"><i style="height:${Math.abs(x.v)/nmx*100}%;background:${x.v<0?'var(--red)':'var(--green)'};${x.y===UI.y&&x.m===UI.m?'':'opacity:.55'}"></i></div><span class="hint small">${MSHORT[x.m]}</span></div>`).join('')}</div></div>
-  ${recBlock()}`;
+  <div class="card"><div class="nbars">${nb.map(x => `<div class="nc" onclick="UI.y=${x.y};UI.m=${x.m};render()"><div class="nv small ${x.v<0?'red':'pos'}">${x.v ? (x.v > 0 ? '+' : '−') + kfmt(Math.abs(dv(x.v))) : '0'}</div><div class="nt"><i style="height:${Math.abs(x.v)/nmx*100}%;background:${x.v<0?'var(--red)':'var(--green)'};${x.y===UI.y&&x.m===UI.m?'':'opacity:.55'}"></i></div><span class="hint small">${MSHORT[x.m]}</span></div>`).join('')}</div></div>
+  ${recBlock(false,'inc')}${recBlock()}`;
+},
+
+an(){
+  const N = UI.anRange || 6;
+  const months = [];
+  for (let i = N - 1; i >= 0; i--) { let m = UI.m - i, y = UI.y; while (m < 0) { m += 12; y--; } months.push({y, m, ...monthStats(y, m)}); }
+  const cur = months[months.length - 1], prev = months[months.length - 2] || {inc:0, exp:0, cats:{}};
+  const active = months.filter(x => x.inc || x.exp);
+  const totInc = months.reduce((s, x) => s + x.inc, 0), totExp = months.reduce((s, x) => s + x.exp, 0);
+  const avgExp = active.length ? totExp / active.length : 0, avgInc = active.length ? totInc / active.length : 0;
+  const sr = totInc > 0 ? (totInc - totExp) / totInc : null;
+  const pct = (a, b) => b > 0 ? Math.round((a / b - 1) * 100) : null;
+  const dlt = (a, b, invert) => { const p = pct(a, b); if (p == null) return '<span class="hint small">—</span>'; const good = invert ? p <= 0 : p >= 0; return `<span class="small ${good ? 'pos' : 'red'}">${p > 0 ? '▲' : p < 0 ? '▼' : '='} ${Math.abs(p)}%</span>`; };
+
+  // category comparison
+  const catAvg = {}; for (const x of active) for (const [c, v] of Object.entries(x.cats)) catAvg[c] = (catAvg[c] || 0) + v / active.length;
+  const catNames = [...new Set([...Object.keys(cur.cats), ...Object.keys(prev.cats)])].filter(c => (cur.cats[c] || 0) > 0.5 || (prev.cats[c] || 0) > 0.5)
+    .sort((a, b) => (cur.cats[b] || 0) - (cur.cats[a] || 0)).slice(0, 10);
+  const cmx = Math.max(1, ...catNames.map(c => Math.max(cur.cats[c] || 0, prev.cats[c] || 0, catAvg[c] || 0)));
+  const catCmp = catNames.map(c => { const a = cur.cats[c] || 0, b = prev.cats[c] || 0, av = catAvg[c] || 0, ci = catInfo(c);
+    return `<div class="cmp" onclick="UI.f={acc:'',cat:'${esc(c).replace(/'/g,"\\'")}',q:'',type:'',all:false};go('tx')">
+      <div class="row between small"><span class="ellip">${ci.i} ${esc(c)}</span><span><b>${D(a)}</b> ${dlt(a, b, true)}</span></div>
+      <div class="cb"><i style="width:${a/cmx*100}%;background:${ci.c}"></i></div>
+      <div class="cb thin"><i style="width:${b/cmx*100}%;background:${ci.c};opacity:.4"></i>${av ? `<s style="left:${av/cmx*100}%"></s>` : ''}</div>
+    </div>`; }).join('');
+
+  // stacked by top categories
+  const topC = Object.entries(catAvg).sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0]);
+  const smx = Math.max(1, ...months.map(x => x.exp));
+  const stacked = months.map(x => { let other = x.exp; const segs = topC.map(c => { const v = Math.max(0, x.cats[c] || 0); other -= v; return `<i style="height:${v/smx*100}%;background:${catInfo(c).c}"></i>`; }).join('');
+    return `<div class="sc" onclick="UI.y=${x.y};UI.m=${x.m};render()"><div class="st">${segs}<i style="height:${Math.max(0,other)/smx*100}%;background:#6b7280"></i></div><span class="hint small">${MSHORT[x.m]}</span></div>`; }).join('');
+
+  // cumulative spending within month: current vs previous vs average
+  const cum = (y, m) => { const D_ = dim(y, m), a = Array(D_).fill(0); for (const t of S.tx) if (inMonth(t, y, m) && catKind(t.cat) === 'exp') a[+t.date.slice(8,10) - 1] -= toUAH(t.amount, t.currency); for (let i = 1; i < D_; i++) a[i] += a[i-1]; return a; };
+  const now = new Date(), isCur = UI.y === now.getFullYear() && UI.m === now.getMonth();
+  let cA = cum(UI.y, UI.m); if (isCur) cA = cA.slice(0, now.getDate());
+  const pm = UI.m === 0 ? 11 : UI.m - 1, py = UI.m === 0 ? UI.y - 1 : UI.y;
+  const cB = cum(py, pm);
+  const cAvg = active.length > 1 ? Array.from({length: 31}, (_, i) => months.slice(0, -1).filter(x => x.inc || x.exp).reduce((s, x) => { const c = cum(x.y, x.m); return s + (c[Math.min(i, c.length - 1)] || 0); }, 0) / Math.max(1, months.slice(0, -1).filter(x => x.inc || x.exp).length)) : [];
+
+  // weekdays
+  const wd = Array(7).fill(0), wdN = Array(7).fill(0);
+  const seenDays = new Set();
+  for (const x of months) for (let d = 1; d <= dim(x.y, x.m); d++) { const dt = new Date(x.y, x.m, d); if (dt > now) break; if (!(x.inc || x.exp)) continue; wdN[(dt.getDay() + 6) % 7]++; }
+  for (const t of S.tx) { if (catKind(t.cat) !== 'exp' || t.amount >= 0) continue; const y = +t.date.slice(0,4), m = +t.date.slice(5,7) - 1; if (!months.some(x => x.y === y && x.m === m)) continue; const dt = new Date(t.date); wd[(dt.getDay() + 6) % 7] -= toUAH(t.amount, t.currency); }
+  const wdAvg = wd.map((v, i) => wdN[i] ? v / wdN[i] : 0), wmx = Math.max(1, ...wdAvg);
+  const WD = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+
+  // income sources (period)
+  const incSrc = {}; for (const t of S.tx) { if (catKind(t.cat) !== 'inc') continue; const y = +t.date.slice(0,4), m = +t.date.slice(5,7) - 1; if (!months.some(x => x.y === y && x.m === m)) continue; incSrc[t.cat] = (incSrc[t.cat] || 0) + toUAH(t.amount, t.currency); }
+  const incItems = Object.entries(incSrc).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).map(([n, v]) => ({n, v, c: catInfo(n).c}));
+  const incTot = incItems.reduce((s, x) => s + x.v, 0);
+
+  // merchants (selected month)
+  const mer = {};
+  for (const t of S.tx) { if (!inMonth(t, UI.y, UI.m) || catKind(t.cat) !== 'exp' || t.amount >= 0) continue;
+    const key = String(t.desc).replace(/^card charge\s*\(|\)$/gi, '').toLowerCase().replace(/[0-9*#№]+/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 2).join(' ') || '—';
+    (mer[key] ||= {n: String(t.desc).replace(/^card charge\s*\(|\)$/gi, '').trim(), v: 0, k: 0, c: t.cat}); mer[key].v -= toUAH(t.amount, t.currency); mer[key].k++; }
+  const merTop = Object.values(mer).sort((a, b) => b.v - a.v).slice(0, 8), mmx = Math.max(1, ...merTop.map(x => x.v));
+
+  // by bank / account (selected month)
+  const byAcc = {}; for (const t of S.tx) { if (!inMonth(t, UI.y, UI.m) || catKind(t.cat) !== 'exp') continue; const a = accById(t.acc); const k = a ? a.name : '?'; byAcc[k] = (byAcc[k] || 0) - toUAH(t.amount, t.currency); }
+  const accRows = Object.entries(byAcc).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]); const amx = Math.max(1, ...accRows.map(x => x[1]));
+
+  // biggest expenses
+  const big = S.tx.filter(t => inMonth(t, UI.y, UI.m) && t.amount < 0 && catKind(t.cat) === 'exp').sort((a, b) => toUAH(a.amount, a.currency) - toUAH(b.amount, b.currency)).slice(0, 5);
+
+  return `${monthNav()}
+  <div class="row between" style="margin:0 2px 8px"><span class="hint small">Період для трендів</span><span class="seg">${[3,6,12].map(n => `<button class="${N===n?'on':''}" onclick="UI.anRange=${n};render()">${n} міс</button>`).join('')}</span></div>
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Доходи за ${N} міс</div><div class="val pos">${D3(totInc)}</div><div class="sub">в середньому ${D(avgInc)}/міс</div></div>
+    <div class="kpi"><div class="lbl">Витрати за ${N} міс</div><div class="val">${D3(totExp)}</div><div class="sub">в середньому ${D(avgExp)}/міс</div></div>
+    <div class="kpi"><div class="lbl">${MONTHS[UI.m]} проти ${MONTHS_GEN[pm]}</div><div class="val">${D(cur.exp)}</div><div class="sub">витрати ${dlt(cur.exp, prev.exp, true)} · доходи ${dlt(cur.inc, prev.inc)}</div></div>
+    <div class="kpi"><div class="lbl">Норма заощаджень</div><div class="val ${sr != null && sr < 0 ? 'red' : 'pos'}">${sr == null ? '—' : Math.round(sr * 100) + '%'}</div><div class="sub">відкладено ${D(totInc - totExp)}</div></div>
+  </div>
+
+  <h2>Доходи, витрати й заощадження</h2>
+  <div class="card">${groupBars(months)}<div class="row small hint" style="gap:12px;margin-top:6px"><span><span class="dot" style="display:inline-block;background:var(--green)"></span> доходи</span><span><span class="dot" style="display:inline-block;background:var(--red)"></span> витрати</span><span><span class="dash" style="border-color:var(--amber);border-top-style:solid"></span> заощаджено</span></div></div>
+
+  <h2>Категорії: ${MONTHS[UI.m]} vs ${MONTHS[pm]}</h2>
+  <div class="card">${catNames.length ? catCmp + `<div class="hint small" style="margin-top:8px">Товста смуга — цей місяць, тонка — минулий, риска — середнє за ${N} міс.</div>` : '<div class="empty">Немає витрат</div>'}</div>
+
+  <h2>Структура витрат по місяцях</h2>
+  <div class="card"><div class="stk">${stacked}</div><div class="legend2">${topC.map(c => `<span><span class="dot" style="background:${catInfo(c).c}"></span>${esc(c)}</span>`).join('')}<span><span class="dot" style="background:#6b7280"></span>Інше</span></div></div>
+
+  <h2>Темп витрат протягом місяця</h2>
+  <div class="card">${multiLine([{v: cB, c: 'var(--hint)', dash: true, n: MONTHS[pm]}, ...(cAvg.length ? [{v: cAvg.slice(0, dim(UI.y, UI.m)), c: 'var(--amber)', dash: true, n: 'середнє'}] : []), {v: cA, c: 'var(--btn)', n: MONTHS[UI.m]}], dim(UI.y, UI.m))}</div>
+
+  <div class="grid2">
+    <div><h2>Дні тижня</h2><div class="card"><div class="wbars">${wdAvg.map((v, i) => `<div class="wc"><div class="wt"><i style="height:${v/wmx*100}%;${i>=5?'background:var(--amber)':''}"></i></div><span class="hint small">${WD[i]}</span></div>`).join('')}</div><div class="hint small" style="margin-top:4px">середні витрати за день</div></div></div>
+    <div><h2>Джерела доходів</h2><div class="card">${incItems.length ? `<div style="display:flex;justify-content:center">${donut(incItems, incTot)}</div>${incItems.map(x => `<div class="row small" style="margin-top:4px"><span class="dot" style="background:${x.c}"></span><span class="grow ellip">${esc(x.n)}</span><b>${Math.round(x.v/incTot*100)}%</b></div>`).join('')}` : '<div class="empty small">Немає доходів</div>'}</div></div>
+  </div>
+
+  <h2>Де найбільше витрачаємо · ${MONTHS[UI.m]}</h2>
+  <div class="card">${merTop.length ? merTop.map(x => `<div style="margin:6px 0"><div class="row between small"><span class="ellip grow">${catInfo(x.c).i} ${esc(x.n)}</span><span class="hint">${x.k}×</span>&nbsp;<b>${D(x.v)}</b></div><div class="cb thin"><i style="width:${x.v/mmx*100}%;background:${catInfo(x.c).c}"></i></div></div>`).join('') : '<div class="empty">Немає витрат</div>'}</div>
+
+  ${accRows.length ? `<h2>Витрати по рахунках · ${MONTHS[UI.m]}</h2><div class="card">${accRows.map(([n, v]) => `<div style="margin:6px 0"><div class="row between small"><span class="ellip">${esc(n)}</span><b>${D(v)}</b></div><div class="cb thin"><i style="width:${v/amx*100}%;background:var(--btn)"></i></div></div>`).join('')}</div>` : ''}
+
+  ${big.length ? `<h2>Найбільші витрати · ${MONTHS[UI.m]}</h2><div class="card list" style="padding:2px 14px">${big.map(txRow).join('')}</div>` : ''}`;
 },
 
 tx(){
@@ -941,7 +1126,7 @@ tx(){
     if (d !== lastDay) {
       if (lastDay) html += `</div>`;
       const lbl = d === today ? 'Сьогодні' : d === yest ? 'Вчора' : new Date(d + 'T12:00').toLocaleDateString('uk-UA', {day:'numeric', month:'long', weekday:'short'});
-      html += `<div class="day"><span>${lbl}</span><span>${money(dayTot[d] || 0)}</span></div><div class="card list" style="padding:2px 14px">`;
+      html += `<div class="day"><span>${lbl}</span><span>${D(dayTot[d] || 0)}</span></div><div class="card list" style="padding:2px 14px">`;
       lastDay = d;
     }
     html += txRow(t);
@@ -957,16 +1142,21 @@ tx(){
     <select onchange="UI.f.cat=this.value;render()"><option value="">Усі категорії</option>${catOpts}</select>
     <select onchange="UI.f.all=this.value==='1';render()"><option value="0">Місяць</option><option value="1" ${f.all?'selected':''}>Увесь час</option></select>
   </div>
-  <div class="row between" style="margin:0 4px 4px"><span class="hint small">${list.length} операцій · підсумок ${money(sum)}</span><button class="btn sm sec" onclick="txSheet()">＋ Операція</button></div>
+  <div class="row between" style="margin:0 4px 4px"><span class="hint small">${list.length} операцій · підсумок ${D(sum)}</span><button class="btn sm sec" onclick="txSheet()">＋ Операція</button></div>
   ${html || '<div class="empty">Операцій не знайдено.<br>Завантажте виписку у вкладці «Рахунки».</div>'}
   ${list.length > UI.limit ? `<button class="btn sec" onclick="UI.limit+=300;render()">Показати ще (${list.length - UI.limit})</button>` : ''}`;
 },
 
 rec(){
-  const total = S.recurring.reduce((s, r) => s + toUAH(Math.abs(r.amount), r.currency), 0);
-  return `${monthNav()}${recBlock(true)}
-  <div class="card"><div class="row between"><span class="hint">Разом обов'язкових на місяць</span><b>${money(total)}</b></div></div>
-  <button class="btn" onclick="recSheet()">＋ Додати повторюваний платіж</button>
+  const sum = k => S.recurring.filter(r => (r.kind || 'exp') === k).reduce((s, r) => s + toUAH(Math.abs(r.amount), r.currency), 0);
+  const ti = sum('inc'), te = sum('exp');
+  return `${monthNav()}${recBlock(true, 'inc')}${recBlock(true, 'exp')}
+  <div class="card">
+    <div class="row between"><span class="hint">Регулярні доходи / міс</span><b class="pos">${D3(ti)}</b></div>
+    <div class="row between" style="margin-top:6px"><span class="hint">Обов'язкові платежі / міс</span><b>${D3(te)}</b></div>
+    ${ti ? `<div class="row between" style="margin-top:6px"><span class="hint">Залишається після обов'язкових</span><b class="${ti-te<0?'red':'pos'}">${D3(ti - te)}</b></div>` : ''}
+  </div>
+  <div class="btns"><button class="btn" onclick="recSheet(null,'exp')">＋ Платіж</button><button class="btn sec" onclick="recSheet(null,'inc')">＋ Регулярний дохід</button></div>
   <p class="hint small" style="margin:10px 4px">Платіж позначається оплаченим автоматично, якщо у виписці знайдено списання на ту ж суму (±3%) у межах ±5 днів від дати, або операцію з ключовим словом. Можна позначити вручну.</p>`;
 },
 
@@ -978,11 +1168,12 @@ acc(){
     const last = S.tx.filter(t => t.acc === a.id).reduce((m, t) => t.date > m ? t.date : m, '');
     const n = S.tx.filter(t => t.acc === a.id).length;
     return `<div class="it" onclick="accSheet('${a.id}')"><div class="grow"><div class="ellip">${esc(a.name)} ${a.inTotal===false?'<span class="hint small">(не в сумі)</span>':''}</div><div class="hint small">${n} операцій${last ? ' · остання ' + last.slice(0,10).split('-').reverse().join('.') : ''}${a.balanceDate ? ' · залишок на ' + a.balanceDate.slice(0,10).split('-').reverse().join('.') : ''}</div></div>
-      <div class="amt">${money(a.balance, a.currency, true)}${a.currency !== 'UAH' && a.balance != null ? `<div class="hint small">${money(toUAH(a.balance, a.currency))}</div>` : ''}</div></div>`;
+      <div class="amt">${money(a.balance, a.currency, true)}${a.currency !== DCUR() && a.balance != null ? `<div class="hint small">${D(toUAH(a.balance, a.currency))}</div>` : ''}</div></div>`;
   }).join('')}</div>`).join('');
-  return `<div class="card"><div class="hint">Разом на рахунках</div><div class="big">${money(T.uah)}</div><div class="hint">≈ ${money(T.uah / (rate('USD')||1), 'USD')} · ≈ ${money(T.uah / (rate('EUR')||1), 'EUR')}</div></div>
+  return `<div class="card"><div class="hint">Разом на рахунках</div><div class="big">${D(T.uah)}</div><div class="hint">≈ ${others(T.uah)}</div></div>
   <div class="btns"><button class="btn" onclick="$('#fileIn').click()">📥 Імпорт виписки</button><button class="btn sec" onclick="monoSheet()">🐈‍⬛ Monobank</button></div>
   <div class="btns"><button class="btn sec" onclick="accSheet()">＋ Рахунок</button></div>
+  ${currencyBlock()}
   ${blocks || '<div class="empty">Рахунків ще немає</div>'}
   <h2>Як вивантажити виписку</h2>
   <div class="card small">
@@ -1020,22 +1211,24 @@ more(){
 
 function txRow(t){
   const c = catInfo(t.cat), a = accById(t.acc);
-  const op = t.opCurrency && t.opCurrency !== t.currency && t.opAmount ? `<div class="hint small">${money(t.opAmount, t.opCurrency, true)}</div>` : '';
+  const op = t.opCurrency && t.opCurrency !== t.currency && t.opAmount ? `<div class="hint small">${money(t.opAmount, t.opCurrency, true)}</div>`
+    : t.currency !== DCUR() ? `<div class="hint small">≈ ${D(toUAH(t.amount, t.currency), true)}</div>` : '';
   const tr = catKind(t.cat) === 'tr';
   return `<div class="it" onclick="txSheet('${t.id}')"><div class="ico" style="background:${c.c}22">${c.i}</div>
     <div class="grow"><div class="ellip">${esc(t.desc || '(без опису)')}</div><div class="hint small ellip">${esc(t.cat)} · ${esc(a ? a.name : '?')}${t.note ? ' · ' + esc(t.note) : ''}</div></div>
     <div class="amt ${t.amount > 0 && !tr ? 'pos' : tr ? 'hint' : ''}">${t.amount > 0 ? '+' : ''}${money(t.amount, t.currency, true)}${op}</div></div>`;
 }
 
-function recBlock(full){
-  const items = S.recurring.map(r => ({r, s: recStatus(r, UI.y, UI.m)})).sort((a, b) => a.r.day - b.r.day);
-  if (!items.length) return full ? '<div class="empty">Немає повторюваних платежів</div>' : '';
+function recBlock(full, kind='exp'){
+  const inc = kind === 'inc';
+  const items = S.recurring.filter(r => (r.kind || 'exp') === kind).map(r => ({r, s: recStatus(r, UI.y, UI.m)})).sort((a, b) => a.r.day - b.r.day);
+  if (!items.length) return full ? (inc ? '' : '<div class="empty">Немає повторюваних платежів</div>') : '';
   const left = items.filter(x => x.s.st !== 'ok').reduce((s, x) => s + toUAH(Math.abs(x.r.amount), x.r.currency), 0);
-  return `<h2>Повторювані платежі · ${MONTHS[UI.m]}</h2><div class="card list" style="padding:2px 14px">
+  return `<h2>${inc ? 'Регулярні доходи' : 'Повторювані платежі'} · ${MONTHS[UI.m]}</h2><div class="card list" style="padding:2px 14px">
     ${items.map(({r, s}) => `<div class="it" onclick="recSheet('${r.id}')"><div class="ico" style="background:${catInfo(r.cat).c}22">${catInfo(r.cat).i}</div>
       <div class="grow"><div class="ellip">${esc(r.name)}</div><div class="hint small">${r.day} числа · ${esc(r.cat)}</div></div>
-      <div class="amt">${money(r.amount, r.currency)}<div>${s.st === 'ok' ? '<span class="pill ok">оплачено</span>' : s.st === 'late' ? '<span class="pill late">прострочено</span>' : `<span class="pill due">${s.days === 0 ? 'сьогодні' : 'через ' + s.days + ' дн'}</span>`}</div></div></div>`).join('')}
-    <div class="row between" style="padding:10px 0"><span class="hint small">Ще сплатити цього місяця</span><b>${money(left)}</b></div></div>`;
+      <div class="amt ${inc ? 'pos' : ''}">${inc ? '+' : ''}${money(r.amount, r.currency)}<div>${s.st === 'ok' ? `<span class="pill ok">${inc ? 'отримано' : 'оплачено'}</span>` : s.st === 'late' ? `<span class="pill late">${inc ? 'затримується' : 'прострочено'}</span>` : `<span class="pill due">${s.days === 0 ? 'сьогодні' : 'через ' + s.days + ' дн'}</span>`}</div></div></div>`).join('')}
+    <div class="row between" style="padding:10px 0"><span class="hint small">${inc ? 'Ще очікується цього місяця' : 'Ще сплатити цього місяця'}</span><b>${D(left)}</b></div></div>`;
 }
 
 /* ============ Sheets ============ */
@@ -1064,7 +1257,7 @@ function simplify(desc){
   return String(desc || '').toLowerCase().replace(/[0-9*#№]+/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 3).join(' ');
 }
 
-function txSheet(id){
+function txSheet(id, sign){
   const t = id ? S.tx.find(x => x.id === id) : null;
   if (!t && !S.accounts.length) { toast('Спершу додайте рахунок'); return accSheet(); }
   if (t) {
@@ -1080,7 +1273,7 @@ function txSheet(id){
       <div class="btns"><button class="btn danger" onclick="delTx('${t.id}')">Видалити операцію</button></div>`);
   } else {
     openSheet(`<h3>Нова операція</h3>
-      <div class="btns" style="margin-top:0"><button class="btn sm sec" id="b_exp" onclick="this.className='btn sm';$('#b_inc').className='btn sm sec';window._sgn=-1">Витрата</button><button class="btn sm sec" id="b_inc" onclick="this.className='btn sm';$('#b_exp').className='btn sm sec';window._sgn=1">Дохід</button></div>
+      <div class="btns" style="margin-top:0"><button class="btn sm sec" id="b_exp" onclick="setSgn(-1)">− Витрата</button><button class="btn sm sec" id="b_inc" onclick="setSgn(1)">＋ Дохід</button></div>
       <label class="f">Сума</label><input id="f_amt" type="number" step="0.01" inputmode="decimal">
       <label class="f">Рахунок</label>${accSelect(S.accounts[0].id)}
       <label class="f">Категорія</label>${catSelect('Інше')}
@@ -1088,8 +1281,27 @@ function txSheet(id){
       <label class="f">Дата</label><input id="f_date" type="datetime-local" value="${isoLocal(new Date()).slice(0,16)}">
       <label class="f"><input type="checkbox" id="f_bal" checked style="width:auto"> Змінити залишок рахунку</label>
       <div class="btns"><button class="btn" onclick="addTx()">Додати</button></div>`);
-    window._sgn = -1; $('#b_exp').className = 'btn sm';
+    setSgn(sign === 1 ? 1 : -1);
   }
+}
+function setSgn(sg){
+  window._sgn = sg;
+  $('#b_exp').className = sg < 0 ? 'btn sm' : 'btn sm sec';
+  $('#b_inc').className = sg > 0 ? 'btn sm' : 'btn sm sec';
+  const c = $('#f_cat'); if (!c) return;
+  const k = catKind(c.value);
+  if (sg > 0 && k !== 'inc') c.value = 'Зарплата';
+  if (sg < 0 && k === 'inc') c.value = 'Інше';
+}
+function quickAdd(){
+  openSheet(`<h3>Додати</h3>
+    <div class="list">
+      <div class="it" onclick="txSheet(null,1)"><div class="ico" style="background:#22c55e22">💰</div><div class="grow"><b>Дохід</b><div class="hint small">Зарплата, виплата з Amazon, подарунок…</div></div></div>
+      <div class="it" onclick="txSheet(null,-1)"><div class="ico" style="background:#ef444422">🛒</div><div class="grow"><b>Витрата</b><div class="hint small">Готівкова чи будь-яка інша покупка</div></div></div>
+      <div class="it" onclick="recSheet(null,'inc')"><div class="ico" style="background:#10b98122">📅</div><div class="grow"><b>Регулярний дохід</b><div class="hint small">Щомісячна зарплата — для прогнозів і контролю надходжень</div></div></div>
+      <div class="it" onclick="recSheet(null,'exp')"><div class="ico" style="background:#64748b22">🔁</div><div class="grow"><b>Регулярний платіж</b><div class="hint small">Паркінг, кредит, садочок, підписки</div></div></div>
+      <div class="it" onclick="closeSheet();$('#fileIn').click()"><div class="ico" style="background:#3b82f622">📥</div><div class="grow"><b>Імпорт виписки</b><div class="hint small">CSV, Excel або PDF</div></div></div>
+    </div>`);
 }
 function saveTx(id){
   const t = S.tx.find(x => x.id === id); if (!t) return;
@@ -1149,26 +1361,29 @@ async function delAcc(id){
   save(); closeSheet(); render();
 }
 
-function recSheet(id){
+function recSheet(id, kind){
   const r = id ? S.recurring.find(x => x.id === id) : null;
+  kind = r ? (r.kind || 'exp') : (kind || 'exp');
+  const inc = kind === 'inc';
   const key = ym(UI.y, UI.m), st = r ? recStatus(r, UI.y, UI.m) : null;
-  openSheet(`<h3>${r ? 'Повторюваний платіж' : 'Новий платіж'}</h3>
-    <label class="f">Назва</label><input id="r_name" value="${esc(r ? r.name : '')}" placeholder="Напр. Інтернет, Садочок, Кредит">
+  openSheet(`<h3>${inc ? (r ? 'Регулярний дохід' : 'Новий регулярний дохід') : (r ? 'Повторюваний платіж' : 'Новий платіж')}</h3>
+    <input type="hidden" id="r_kind" value="${kind}">
+    <label class="f">Назва</label><input id="r_name" value="${esc(r ? r.name : '')}" placeholder="${inc ? 'Напр. Зарплата, Amazon payout' : 'Напр. Інтернет, Садочок, Кредит'}">
     <div class="row"><div class="grow"><label class="f">Сума</label><input id="r_amt" type="number" step="0.01" inputmode="decimal" value="${r ? r.amount : ''}"></div>
     <div style="width:100px"><label class="f">Валюта</label><select id="r_cur">${['UAH','USD','EUR'].map(c => `<option ${r && r.currency===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
     <label class="f">День місяця</label><input id="r_day" type="number" min="1" max="31" value="${r ? r.day : 1}">
-    <label class="f">Категорія</label>${catSelect(r ? r.cat : 'Комунальні', 'r_cat')}
+    <label class="f">Категорія</label>${catSelect(r ? r.cat : (inc ? 'Зарплата' : 'Комунальні'), 'r_cat')}
     <label class="f">Ключове слово в описі (необов'язково)</label><input id="r_match" value="${esc(r ? r.match || '' : '')}" placeholder="Напр. kyivstar">
     <div class="btns"><button class="btn" onclick="saveRec('${r ? r.id : ''}')">Зберегти</button></div>
     ${r ? `${st.st === 'ok' && st.tx ? `<p class="hint small">Знайдено оплату: ${esc(st.tx.desc)} · ${money(st.tx.amount, st.tx.currency, true)} · ${st.tx.date.slice(0,10).split('-').reverse().join('.')}</p>` : ''}
-      <div class="btns"><button class="btn sec" onclick="togglePaid('${r.id}','${key}')">${r.paid && r.paid[key] ? 'Зняти позначку «оплачено»' : 'Позначити оплаченим за ' + MONTHS[UI.m]}</button></div>
+      <div class="btns"><button class="btn sec" onclick="togglePaid('${r.id}','${key}')">${r.paid && r.paid[key] ? 'Зняти позначку' : (inc ? 'Позначити отриманим за ' : 'Позначити оплаченим за ') + MONTHS[UI.m]}</button></div>
       <div class="btns"><button class="btn danger" onclick="delRec('${r.id}')">Видалити</button></div>` : ''}`);
 }
 function saveRec(id){
   const amount = parseFloat($('#r_amt').value); if (!amount) return toast('Вкажіть суму');
   let r = id ? S.recurring.find(x => x.id === id) : null;
   if (!r) { r = {id: uid(), paid: {}}; S.recurring.push(r); }
-  Object.assign(r, {name: $('#r_name').value.trim() || 'Платіж', amount: Math.abs(amount), currency: $('#r_cur').value,
+  Object.assign(r, {kind: $('#r_kind').value, name: $('#r_name').value.trim() || 'Платіж', amount: Math.abs(amount), currency: $('#r_cur').value,
     day: Math.min(31, Math.max(1, parseInt($('#r_day').value) || 1)), cat: $('#r_cat').value, match: $('#r_match').value.trim()});
   save(); closeSheet(); render(); haptic('medium');
 }
