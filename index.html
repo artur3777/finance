@@ -230,6 +230,14 @@ const KW = [
   ['з банки',TR],['на банку',TR],['withdrawal to',TR],['transfer to bank',TR],['transfer to your bank',TR],['власних коштів',TR],
   ['зарплат','Зарплата',1],['заробітн','Зарплата',1],['salary','Зарплата',1],['грошове забезпечення','Зарплата',1],
   ['amazon','Amazon / Payoneer',1],['payoneer','Amazon / Payoneer',1],['кешбек','Інший дохід',1],['cashback','Інший дохід',1],
+  ['u ecom','Amazon / Payoneer',1],['uecom','Amazon / Payoneer',1],['u-ecom','Amazon / Payoneer',1],
+  ['sparkys','Дитина'],['lidl','Продукти'],['billa','Продукти'],['kaufland','Продукти'],['tesco','Продукти'],['yeme','Продукти'],['spar','Продукти'],['biedronka','Продукти'],['żabka','Продукти'],['zabka','Продукти'],['coop jednota','Продукти'],
+  ['(dm ','Дім'],['dm drogerie','Дім'],['rossmann','Дім'],['pepco','Дім'],['action ','Дім'],['tedi','Дім'],
+  ['sinsay','Одяг'],['sin-say','Одяг'],['primark','Одяг'],['h&m','Одяг'],['zara','Одяг'],['reserved','Одяг'],['lpp','Одяг'],['deichmann','Одяг'],['ccc ','Одяг'],
+  ['alza','Техніка'],['datart','Техніка'],['mediamarkt','Техніка'],['nay ','Техніка'],
+  ['mcdonald','Кафе і ресторани'],['kfc','Кафе і ресторани'],['starbucks','Кафе і ресторани'],['burger','Кафе і ресторани'],['zen garden','Кафе і ресторани'],['restaur','Кафе і ресторани'],['pizza','Кафе і ресторани'],['bistro','Кафе і ресторани'],['cafe','Кафе і ресторани'],['coffee','Кафе і ресторани'],
+  ['ticket','Розваги'],['cinema','Розваги'],['cinemacity','Розваги'],
+  ['paypal','Покупки онлайн'],['amazon.','Покупки онлайн',-1],
   ['паркінг','Паркінг'],['parking','Паркінг'],['паркування','Паркінг'],
   ['сільпо','Продукти'],['silpo','Продукти'],['атб','Продукти'],['atb','Продукти'],['novus','Продукти'],['фора','Продукти'],['fora','Продукти'],
   ['metro','Продукти'],['varus','Продукти'],['ашан','Продукти'],['auchan','Продукти'],['велмарт','Продукти'],['наш край','Продукти'],['таврія','Продукти'],
@@ -352,7 +360,7 @@ function parseNum(v){
   return neg ? -Math.abs(n) : n;
 }
 const MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-function parseDate(v){
+function parseDate(v, order){
   if (v == null || v === '') return null;
   if (v instanceof Date) return isNaN(v) ? null : isoLocal(v);
   if (typeof v === 'number') return (v > 20000 && v < 80000) ? isoUTC(new Date(Math.round((v - 25569) * 86400000))) : null;
@@ -362,7 +370,7 @@ function parseDate(v){
   if (t) { h = +t[1]; mi = +t[2]; se = +(t[3]||0); if (t[4]) { const pm = /pm/i.test(t[4]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; } }
   if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) { Y=+m[1]; M=+m[2]; D=+m[3]; }
   else if ((m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/))) { D=+m[1]; M=+m[2]; Y=+m[3]; }
-  else if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) { const a=+m[1], b=+m[2]; Y=+m[3]; if (a > 12) { D=a; M=b; } else { M=a; D=b; } }
+  else if ((m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/))) { const a=+m[1], b=+m[2]; Y=+m[3]; if (order === 'dmy' || (order !== 'mdy' && a > 12)) { D=a; M=b; } else { M=a; D=b; } }
   else if ((m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/))) { M=MON[m[1].toLowerCase()]; D=+m[2]; Y=+m[3]; }
   else if ((m = s.match(/(\d{1,2})[\s-]+([A-Za-z]{3})[a-z]*\.?,?[\s-]+(\d{4})/))) { D=+m[1]; M=MON[m[2].toLowerCase()]; Y=+m[3]; }
   else return null;
@@ -436,17 +444,19 @@ const FIELDS = {
   currency:['валюта картки','валюта рахунку','currency','валюта'],
   credit:['надходження','зарахування','credit','прихід'],
   debit:['витрата','списання','debit','розхід'],
+  time:['transaction time','час операції','час','time'],
+  tz:['time zone','timezone','часовий пояс'],
   mcc:['mcc'],
   bankCat:['категорія','category','type'],
   balance:['залишок після операції','залишок на кінець періоду','залишок','balance','running balance'],
   card:['картка','номер картки','card'],
   status:['статус','status'],
 };
-const FIELD_LABELS = {date:'Дата *',desc:'Опис',amount:'Сума *',currency:'Валюта рахунку',balance:'Залишок',card:'Картка/рахунок',mcc:'MCC',bankCat:'Категорія банку',credit:'Надходження',debit:'Витрата',status:'Статус',opAmount:'Сума в валюті операції',opCurrency:'Валюта операції'};
+const FIELD_LABELS = {date:'Дата *',time:'Час',tz:'Часовий пояс',desc:'Опис',amount:'Сума *',currency:'Валюта рахунку',balance:'Залишок',card:'Картка/рахунок',mcc:'MCC',bankCat:'Категорія банку',credit:'Надходження',debit:'Витрата',status:'Статус',opAmount:'Сума в валюті операції',opCurrency:'Валюта операції'};
 const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 function mapHeader(hdr){
   const h = hdr.map(norm), used = new Set(), map = {};
-  const order = ['opAmount','opCurrency','date','desc','mcc','balance','card','status','credit','debit','amount','bankCat','currency'];
+  const order = ['opAmount','opCurrency','tz','time','date','desc','mcc','balance','card','status','credit','debit','amount','bankCat','currency'];
   for (const f of order) {
     let best = -1, bl = 0;
     h.forEach((col, i) => {
@@ -479,10 +489,20 @@ function extract(rows, hi, map, invert){
   const hdr = rows[hi] || [];
   let fileCur = '';
   if (map.amount != null) { const mm = String(hdr[map.amount]).match(/\(([A-Za-z]{3})\)/); if (mm) fileCur = mm[1].toUpperCase(); }
+  // file-level day/month order for 01-02-2026 or 01/02/2026 style dates
+  let order = '';
+  if (map.date != null) for (let r = hi + 1; r < rows.length && !order; r++) {
+    const mm = String(rows[r][map.date] ?? '').trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-]\d{2,4}/);
+    if (mm) { if (+mm[1] > 12) order = 'dmy'; else if (+mm[2] > 12) order = 'mdy'; }
+  }
+  if (!order && map.date != null && /\//.test(String((rows[hi+1] || [])[map.date] ?? ''))) order = 'mdy';
   const out = [];
   for (let r = hi + 1; r < rows.length; r++) {
     const row = rows[r], g = k => map[k] != null ? row[map[k]] : undefined;
-    const date = parseDate(g('date')); if (!date) continue;
+    let dv = g('date');
+    if (map.time != null && !(dv instanceof Date) && g('time') != null && g('time') !== '') dv = String(dv) + ' ' + String(g('time'));
+    let date = parseDate(dv, order); if (!date) continue;
+    if (/^(utc|gmt|z$)/.test(norm(g('tz')))) { const d = new Date(date + 'Z'); if (!isNaN(d)) date = isoLocal(d); }
     let amount = map.amount != null ? parseNum(g('amount')) : null;
     if (amount == null && (map.credit != null || map.debit != null)) {
       const c = parseNum(g('credit')) || 0, d = parseNum(g('debit')) || 0;
@@ -1145,7 +1165,7 @@ function impSheet(){
     ${recs.length ? `<label class="f">Перші операції</label><table class="pv">${recs.slice(0, 5).map(r => `<tr><td>${r.date.slice(0,10).split('-').reverse().join('.')}</td><td class="ellip" style="max-width:150px">${esc(r.desc)}</td><td style="text-align:right;white-space:nowrap">${money(r.amount, r.currency || 'UAH', true)}</td></tr>`).join('')}</table>` : ''}
     <details ${recs.length ? '' : 'open'}><summary>Налаштувати колонки</summary>
       <label class="f">Рядок із заголовками</label><input type="number" min="1" value="${F.hi + 1}" onchange="impHeader(this.value)">
-      ${['date','desc','amount','currency','balance','card','credit','debit','mcc','bankCat','status','opAmount','opCurrency'].map(sel).join('')}
+      ${['date','time','tz','desc','amount','currency','balance','card','credit','debit','mcc','bankCat','status','opAmount','opCurrency'].map(sel).join('')}
       <label class="f"><input type="checkbox" style="width:auto" ${F.invert ? 'checked' : ''} onchange="IMP.files[IMP.idx].invert=this.checked;impSheet()"> Змінити знак усіх сум</label>
     </details>
     <div class="btns"><button class="btn" ${recs.length ? '' : 'disabled style="opacity:.5"'} onclick="doImport()">Імпортувати</button></div>
