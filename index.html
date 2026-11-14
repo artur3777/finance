@@ -122,7 +122,7 @@ h2.row{display:flex}
   <button class="tab" data-t="acc" onclick="go('acc')"><b>🏦</b>Рахунки</button>
   <button class="tab" data-t="more" onclick="go('more')"><b>⚙️</b>Ще</button>
 </nav>
-<input type="file" id="fileIn" accept=".csv,.xlsx,.xls,.txt,text/csv" multiple hidden onchange="onFiles(this.files);this.value=''">
+<input type="file" id="fileIn" accept=".csv,.xlsx,.xls,.txt,.pdf,text/csv,application/pdf" multiple hidden onchange="onFiles(this.files);this.value=''">
 <input type="file" id="jsonIn" accept=".json,application/json" hidden onchange="importBackup(this.files[0]);this.value=''">
 
 <script>
@@ -420,6 +420,7 @@ function loadXLSX(){
 async function readRows(file){
   const name = file.name.toLowerCase();
   const buf = await file.arrayBuffer();
+  if (/\.pdf$/.test(name) || file.type === 'application/pdf') return pdfRows(buf);
   if (/\.(xlsx|xls|xlsm|ods)$/.test(name)) {
     await loadXLSX();
     const wb = XLSX.read(buf, {type:'array', cellDates:true});
@@ -435,6 +436,93 @@ async function readRows(file){
   catch(e) { text = new TextDecoder('windows-1251').decode(buf); }
   return parseCSV(text);
 }
+/* ============ PDF statements ============ */
+let pdfP;
+function loadPDF(){
+  if (window.pdfjsLib) return Promise.resolve();
+  return pdfP ||= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(); };
+    s.onerror = () => rej(new Error('Не вдалося завантажити модуль PDF'));
+    document.head.appendChild(s);
+  });
+}
+const PDF_DATE = /^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}/;
+async function pdfRows(buf){
+  await loadPDF();
+  const doc = await pdfjsLib.getDocument({data: buf}).promise;
+  const lines = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p), vp = page.getViewport({scale: 1}), tc = await page.getTextContent();
+    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({
+      s: it.str.replace(/\s+/g, ' ').trim(), x: it.transform[4], y: vp.height - it.transform[5],
+      w: it.width || it.str.length * 4, h: Math.abs(it.transform[3]) || 8}));
+    items.sort((a, b) => a.y - b.y || a.x - b.x);
+    for (const it of items) {
+      const L = lines[lines.length - 1];
+      if (L && L.p === p && Math.abs(L.y - it.y) <= Math.max(2, it.h * 0.5)) L.items.push(it);
+      else lines.push({p, y: it.y, h: it.h, items: [it]});
+    }
+  }
+  lines.forEach(L => { L.items.sort((a, b) => a.x - b.x); L.text = L.items.map(i => i.s).join(' '); });
+  const isData = L => PDF_DATE.test(L.items[0].s);
+  const hasHdr = t => /дата|date/i.test(t) && /сума|сумма|amount|зарахування|списання/i.test(t);
+  // header: line with "дата" whose next lines (before first data line) contain "сума"
+  let hi = -1, he = -1;
+  for (let i = 0; i < lines.length && hi < 0; i++) {
+    if (!/дата|date/i.test(lines[i].text) || isData(lines[i])) continue;
+    let j = i, txt = '';
+    while (j < lines.length && j < i + 5 && !isData(lines[j])) { txt += ' ' + lines[j].text; j++; }
+    if (hasHdr(txt) && j < lines.length && isData(lines[j])) { hi = i; he = j; }
+  }
+  const pre = lines.slice(0, hi < 0 ? 30 : hi).map(l => l.text).join(' ');
+  const meta = {};
+  const cm = pre.match(/(?:\*{2,}|[xх]{4,}|•+)\s*(\d{4})/i); if (cm) meta.card = cm[1];
+  const cur = pre.match(/\b(UAH|USD|EUR|PLN|GBP)\b|(грн)/i); if (cur) meta.currency = normCur(cur[0]);
+  if (hi < 0) return {rows: pdfFallback(lines), meta};
+  // columns from header items (merge overlapping x-ranges across header lines)
+  const cols = [];
+  for (const it of lines.slice(hi, he).flatMap(l => l.items).sort((a, b) => a.x - b.x)) {
+    const c = cols.find(c => it.x < c.x1 + 3 && it.x + it.w > c.x0 - 3);
+    if (c) { c.x0 = Math.min(c.x0, it.x); c.x1 = Math.max(c.x1, it.x + it.w); c.parts.push(it); }
+    else cols.push({x0: it.x, x1: it.x + it.w, parts: [it]});
+  }
+  cols.sort((a, b) => a.x0 - b.x0);
+  const header = cols.map(c => c.parts.sort((a, b) => a.y - b.y || a.x - b.x).map(p => p.s).join(' '));
+  const colOf = it => {
+    const cx = it.x + it.w / 2;
+    let best = 0, bd = Infinity;
+    cols.forEach((c, i) => { const d = cx < c.x0 ? c.x0 - cx : cx > c.x1 ? cx - c.x1 : 0; if (d < bd) { bd = d; best = i; } });
+    return best;
+  };
+  const rows = [header];
+  let cur_ = null, prev = null;
+  for (let i = he; i < lines.length; i++) {
+    const L = lines[i];
+    if (!isData(L) && hasHdr(L.text)) { prev = null; continue; }           // repeated header on next page
+    if (isData(L)) { cur_ = header.map(() => ''); rows.push(cur_); }
+    else if (!cur_ || !prev || prev.p !== L.p || L.y - prev.y > L.h * 2.4) { prev = null; continue; } // footer / unrelated text
+    for (const it of L.items) { const k = colOf(it); cur_[k] = (cur_[k] ? cur_[k] + ' ' : '') + it.s; }
+    prev = L;
+  }
+  if (meta.card && !header.some(h => /^(картка|номер картки|card)/i.test(h.trim()))) { header.push('Картка'); rows.slice(1).forEach(r => r.push('**** ' + meta.card)); }
+  return {rows, meta};
+}
+function pdfFallback(lines){
+  const rows = [['Дата', 'Опис', 'Сума', 'Залишок']];
+  const NUM = /[-−+]?\d{1,3}(?:[  ]?\d{3})*[.,]\d{2}(?!\d)/g;
+  for (const L of lines) {
+    if (!PDF_DATE.test(L.text)) continue;
+    const nums = L.text.match(NUM) || [];
+    if (!nums.length) continue;
+    const dm = L.text.match(/^\S+(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/)[0];
+    let desc = L.text.slice(dm.length); nums.forEach(n => desc = desc.replace(n, ''));
+    rows.push([dm, desc.replace(/\s+/g, ' ').trim(), nums[0], nums.length > 1 ? nums[nums.length - 1] : '']);
+  }
+  return rows;
+}
+
 const FIELDS = {
   date:['дата і час операції','дата i час операції','дата та час операції','дата операції','дата і час','дата','date','transaction date','posting date'],
   desc:['деталі операції','опис операції','призначення платежу','призначення','опис','деталі','description','details','merchant','назва'],
@@ -1113,9 +1201,12 @@ async function onFiles(files){
   const list = [];
   for (const f of files) {
     try {
-      const rows = await readRows(f);
+      let rows = await readRows(f), meta = {};
+      if (rows && rows.rows) { meta = rows.meta || {}; rows = rows.rows; }
+      if (!rows.length || rows.length < 2) throw new Error('не знайдено таблиці операцій');
       const {hi, map} = detectHeader(rows);
-      list.push({name: f.name, rows, hi, map, bank: guessBank(rows[hi] || [], f.name), invert: false, targets: {}});
+      const pdf = /\.pdf$/i.test(f.name);
+      list.push({name: f.name, rows, hi, map, bank: pdf && guessBank(rows[hi] || [], f.name) === 'other' ? 'privat' : guessBank(rows[hi] || [], f.name), invert: false, targets: {}, forceCur: meta.currency || ''});
     } catch(e) { toast(`${f.name}: ${e.message}`); }
   }
   if (!list.length) return;
@@ -1127,8 +1218,9 @@ function impGroups(F){
   const groups = {};
   for (const r of recs) {
     const card = r.card ? r.card.replace(/\D/g, '').slice(-4) || r.card.slice(-8) : '';
-    const k = card + '|' + (r.currency || '');
-    (groups[k] ||= {card, currency: r.currency, recs: []}).recs.push(r);
+    const c = r.currency || F.forceCur || '';
+    const k = card + '|' + c;
+    (groups[k] ||= {card, currency: c, recs: []}).recs.push(r);
   }
   return {recs, groups};
 }
@@ -1153,14 +1245,14 @@ function impSheet(){
     return `<div class="row" style="margin-top:8px"><div class="grow small"><b>${g.card ? '•' + esc(g.card) + ' ' : ''}${cur}</b> <span class="hint">· ${g.recs.length} оп.</span></div>
       <select style="width:58%" onchange="IMP.files[IMP.idx].targets['${k}']=this.value"><option value="new" ${F.targets[k]==='new'?'selected':''}>＋ Новий: ${esc(bankName)} ${g.card ? '•' + esc(g.card) : ''} ${cur}</option>${opts}</select></div>`;
   }).join('');
-  const needCur = gk.some(k => !groups[k].currency);
+  const needCur = gk.some(k => !groups[k].currency) || (F.forceCur && /\.pdf$/i.test(F.name));
   openSheet(`<h3>Імпорт ${IMP.files.length > 1 ? `(${IMP.idx + 1}/${IMP.files.length})` : ''}</h3>
     <div class="hint small ellip">📄 ${esc(F.name)}</div>
     <div class="card" style="margin-top:10px">
       ${recs.length ? `<div class="mid">${recs.length} операцій</div><div class="hint small">${dates[0].slice(0,10).split('-').reverse().join('.')} — ${dates[dates.length-1].slice(0,10).split('-').reverse().join('.')}</div>` : `<div class="red">Не вдалося розпізнати операції. Перевірте колонки нижче.</div>`}
     </div>
     <label class="f">Банк</label><select onchange="IMP.files[IMP.idx].bank=this.value;IMP.files[IMP.idx].targets={};impSheet()">${Object.entries(BANKS).map(([k, b]) => `<option value="${k}" ${F.bank===k?'selected':''}>${b.i} ${b.n}</option>`).join('')}</select>
-    ${needCur ? `<label class="f">Валюта рахунку (у файлі не вказана)</label><select onchange="impCur(this.value)"><option value="">—</option>${['UAH','USD','EUR','PLN'].map(c => `<option>${c}</option>`).join('')}</select>` : ''}
+    ${needCur ? `<label class="f">Валюта рахунку${F.forceCur ? '' : ' (у файлі не вказана)'}</label><select onchange="impCur(this.value)"><option value="">—</option>${['UAH','USD','EUR','PLN'].map(c => `<option ${F.forceCur===c?'selected':''}>${c}</option>`).join('')}</select>` : ''}
     ${gk.length ? `<label class="f">Куди записати</label>${groupHtml}` : ''}
     ${recs.length ? `<label class="f">Перші операції</label><table class="pv">${recs.slice(0, 5).map(r => `<tr><td>${r.date.slice(0,10).split('-').reverse().join('.')}</td><td class="ellip" style="max-width:150px">${esc(r.desc)}</td><td style="text-align:right;white-space:nowrap">${money(r.amount, r.currency || 'UAH', true)}</td></tr>`).join('')}</table>` : ''}
     <details ${recs.length ? '' : 'open'}><summary>Налаштувати колонки</summary>
