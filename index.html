@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Сімейні фінанси</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg: var(--tg-theme-secondary-bg-color,#0e1014);
+  --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color,#171a21));
+  --text: var(--tg-theme-text-color,#e9ebf1);
+  --hint: var(--tg-theme-hint-color,#8a90a0);
+  --link: var(--tg-theme-link-color,#5aa9ff);
+  --btn: var(--tg-theme-button-color,#3b82f6);
+  --btnt: var(--tg-theme-button-text-color,#fff);
+  --sep: var(--tg-theme-section-separator-color, rgba(140,140,160,.18));
+  --red: var(--tg-theme-destructive-text-color,#ef4444);
+  --green:#22c55e; --amber:#f59e0b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+#view{padding:12px 12px calc(84px + env(safe-area-inset-bottom))}
+h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);margin:18px 4px 8px}
+.card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.hint{color:var(--hint);font-size:13px}
+.small{font-size:12px}
+.big{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.mid{font-size:18px;font-weight:600}
+.pos{color:var(--green)} .neg{color:var(--text)} .red{color:var(--red)} .amber{color:var(--amber)}
+.ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{appearance:none;border:0;border-radius:12px;padding:11px 14px;font:inherit;font-weight:600;background:var(--btn);color:var(--btnt);cursor:pointer;width:100%}
+.btn.sec{background:color-mix(in srgb,var(--btn) 14%,transparent);color:var(--link)}
+.btn.danger{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.btn.sm{width:auto;padding:7px 12px;font-size:13px;border-radius:10px}
+.btns{display:flex;gap:8px;margin-top:8px}
+.btns .btn{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:color-mix(in srgb,var(--hint) 14%,transparent);font-size:13px;margin:0 6px 6px 0;cursor:pointer;border:1.5px solid transparent}
+.chip.on{border-color:var(--btn);color:var(--link)}
+.ico{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+.list .it{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--sep);cursor:pointer}
+.list .it:last-child{border-bottom:0}
+.amt{font-weight:600;white-space:nowrap;text-align:right}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--sep);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tab{flex:1;border:0;background:none;color:var(--hint);font:inherit;font-size:11px;padding:8px 0 9px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.tab b{font-size:20px;font-weight:400;line-height:1.1;filter:grayscale(1);opacity:.7}
+.tab.on{color:var(--link)} .tab.on b{filter:none;opacity:1}
+.mnav{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px}
+.mnav button{border:0;background:var(--card);color:var(--text);width:36px;height:36px;border-radius:12px;font-size:18px;cursor:pointer}
+.mnav .t{font-weight:600;font-size:16px;text-transform:capitalize}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--card);border-radius:14px;padding:10px}
+.stat .v{font-weight:700;font-size:15px;margin-top:2px}
+.bar{height:6px;border-radius:4px;background:color-mix(in srgb,var(--hint) 18%,transparent);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:4px}
+.bars{display:flex;align-items:flex-end;gap:10px;height:120px;padding-top:6px}
+.bars .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bars .pair{display:flex;gap:3px;align-items:flex-end;height:100%;width:100%;justify-content:center}
+.bars .pair i{width:40%;max-width:14px;border-radius:4px 4px 0 0;min-height:2px}
+.pill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+.pill.due{background:color-mix(in srgb,var(--amber) 18%,transparent);color:var(--amber)}
+.pill.late{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+input,select,textarea{font:inherit;color:var(--text);background:color-mix(in srgb,var(--hint) 12%,transparent);border:1px solid var(--sep);border-radius:10px;padding:10px;width:100%;outline:none}
+select{appearance:auto}
+label.f{display:block;margin:10px 0 4px;font-size:13px;color:var(--hint)}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
+.filters select,.filters input{width:auto;min-width:110px;padding:8px;font-size:13px}
+.day{display:flex;justify-content:space-between;color:var(--hint);font-size:13px;margin:14px 4px 6px}
+.empty{text-align:center;color:var(--hint);padding:30px 10px}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;animation:fd .15s}
+.sheet{background:var(--bg);width:100%;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));animation:up .2s ease-out}
+.sheet h3{margin:0 0 6px;font-size:18px}
+.x{float:right;border:0;background:color-mix(in srgb,var(--hint) 16%,transparent);color:var(--hint);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+@keyframes fd{from{opacity:0}}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111827;color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;z-index:40;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+table.pv{width:100%;border-collapse:collapse;font-size:12px}
+table.pv td{padding:4px 2px;border-bottom:1px solid var(--sep)}
+.log{font:12px/1.4 ui-monospace,Menlo,monospace;background:color-mix(in srgb,var(--hint) 10%,transparent);border-radius:10px;padding:8px;max-height:180px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+.donut{display:flex;gap:14px;align-items:center}
+.legend .lg{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+details summary{cursor:pointer;color:var(--link);font-size:13px;margin-top:8px}
+a{color:var(--link)}
+.hero{border-radius:20px;padding:16px;margin-bottom:10px;color:#fff;background:radial-gradient(120% 140% at 100% 0%,color-mix(in srgb,var(--btn) 70%,#a855f7) 0%,transparent 55%),linear-gradient(135deg,color-mix(in srgb,var(--btn) 85%,#000) 0%,color-mix(in srgb,var(--btn) 60%,#0f172a) 100%);box-shadow:0 8px 24px color-mix(in srgb,var(--btn) 25%,transparent)}
+.hbtn{border:0;background:rgba(255,255,255,.16);color:#fff;font:inherit;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;cursor:pointer}
+.hchip{display:inline-block;background:rgba(255,255,255,.14);border-radius:999px;padding:5px 10px;font-size:12px;margin:0 6px 6px 0}
+.delta{font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.18)}
+.delta.up{color:#bbf7d0}.delta.dn{color:#fecaca}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.kpi{background:var(--card);border-radius:16px;padding:12px}
+.kpi .lbl{font-size:12px;color:var(--hint)}
+.kpi .val{font-size:19px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+.kpi .sub{font-size:11px;color:var(--hint);font-weight:400;margin-top:2px}
+h2.row{display:flex}
+.seg{display:inline-flex;background:var(--card);border-radius:10px;padding:2px;text-transform:none;letter-spacing:0}
+.seg button{border:0;background:none;color:var(--hint);font:inherit;font-size:12px;padding:4px 10px;border-radius:8px;cursor:pointer}
+.seg button.on{background:var(--btn);color:var(--btnt)}
+.dash{display:inline-block;width:16px;border-top:2px dashed var(--btn);vertical-align:middle}
+.xl{display:flex;justify-content:space-between;font-size:11px;color:var(--hint);margin-top:4px;padding:0 2px}
+.xl span{flex:1;text-align:center}
+.goal{cursor:pointer}
+.datebox{width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--btn) 14%,transparent);color:var(--link);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;line-height:1}
+.datebox b{font-size:16px}.datebox span{font-size:10px;margin-top:2px}
+.nbars{display:flex;gap:8px;height:130px}
+.nc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.nt{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.nt i{width:60%;max-width:26px;border-radius:6px 6px 2px 2px;min-height:3px;display:block}
+.nv{font-weight:600;font-size:11px}
+</style>
+</head>
+<body>
+<div id="view"></div>
+<nav class="tabs">
+  <button class="tab" data-t="home" onclick="go('home')"><b>📊</b>Огляд</button>
+  <button class="tab" data-t="tx" onclick="go('tx')"><b>🧾</b>Операції</button>
+  <button class="tab" data-t="rec" onclick="go('rec')"><b>🔁</b>Платежі</button>
+  <button class="tab" data-t="acc" onclick="go('acc')"><b>🏦</b>Рахунки</button>
+  <button class="tab" data-t="more" onclick="go('more')"><b>⚙️</b>Ще</button>
+</nav>
+<input type="file" id="fileIn" accept=".csv,.xlsx,.xls,.txt,text/csv" multiple hidden onchange="onFiles(this.files);this.value=''">
+<input type="file" id="jsonIn" accept=".json,application/json" hidden onchange="importBackup(this.files[0]);this.value=''">
+
+<script>
+/* ============ Telegram & storage ============ */
+const tg = window.Telegram && window.Telegram.WebApp;
+const inTG = !!(tg && tg.platform && tg.platform !== 'unknown');
+const KEY = 'famfin_v1', TOKEN_KEY = 'famfin_mono';
+const ver = v => inTG && tg.isVersionAtLeast && tg.isVersionAtLeast(v);
+
+const Store = {
+  dev(){ return ver('9.0') && tg.DeviceStorage ? tg.DeviceStorage : null; },
+  load(){
+    return new Promise(res => {
+      let local = null; try { local = localStorage.getItem(KEY); } catch(e){}
+      const d = this.dev();
+      if (!d) return res(local);
+      let done = false;
+      const t = setTimeout(() => { if(!done){done=true;res(local);} }, 2500);
+      d.getItem(KEY, (err, val) => {
+        if (done) return; done = true; clearTimeout(t);
+        const at = s => { try { return JSON.parse(s).savedAt || 0; } catch(e){ return -1; } };
+        res(val && at(val) >= at(local) ? val : local);
+      });
+    });
+  },
+  save(str){
+    try { localStorage.setItem(KEY, str); } catch(e){}
+    const d = this.dev(); if (d) d.setItem(KEY, str, () => {});
+  }
+};
+const Secret = {
+  get(){ return new Promise(res => {
+    let l = ''; try { l = localStorage.getItem(TOKEN_KEY) || ''; } catch(e){}
+    if (ver('9.0') && tg.SecureStorage) {
+      try { tg.SecureStorage.getItem(TOKEN_KEY, (e, v) => res(v || l)); } catch(e){ res(l); }
+    } else res(l);
+  });},
+  set(v){
+    if (ver('9.0') && tg.SecureStorage) {
+      try { tg.SecureStorage.setItem(TOKEN_KEY, v, (e) => { if (e) { try{localStorage.setItem(TOKEN_KEY, v);}catch(_){} } }); return; } catch(e){}
+    }
+    try { localStorage.setItem(TOKEN_KEY, v); } catch(e){}
+  }
+};
+const haptic = (t='light') => { try { tg.HapticFeedback.impactOccurred(t); } catch(e){} };
+const openLink = u => { if (inTG) tg.openLink(u); else window.open(u, '_blank'); };
+const ask = (msg) => new Promise(res => { if (ver('6.2')) tg.showConfirm(msg, ok => res(ok)); else res(confirm(msg)); });
+
+/* ============ Reference data ============ */
+const CATS = [
+  {n:'Продукти',i:'🛒',c:'#22c55e'},
+  {n:'Кафе і ресторани',i:'🍽️',c:'#f97316'},
+  {n:'Транспорт',i:'🚕',c:'#eab308'},
+  {n:'Авто і пальне',i:'⛽',c:'#ca8a04'},
+  {n:'Паркінг',i:'🅿️',c:'#64748b'},
+  {n:'Комунальні',i:'🏠',c:'#0ea5e9'},
+  {n:"Зв'язок та інтернет",i:'📱',c:'#06b6d4'},
+  {n:'Дитина',i:'👶',c:'#f472b6'},
+  {n:"Здоров'я",i:'💊',c:'#ef4444'},
+  {n:'Одяг',i:'👕',c:'#8b5cf6'},
+  {n:'Дім',i:'🛋️',c:'#14b8a6'},
+  {n:'Техніка',i:'💻',c:'#6366f1'},
+  {n:'Покупки онлайн',i:'📦',c:'#d946ef'},
+  {n:'Розваги',i:'🎬',c:'#fb7185'},
+  {n:'Підписки',i:'🔁',c:'#a855f7'},
+  {n:'Подарунки',i:'🎁',c:'#f43f5e'},
+  {n:'Бізнес',i:'💼',c:'#0891b2'},
+  {n:'Податки і комісії',i:'🧾',c:'#78716c'},
+  {n:'Готівка',i:'💵',c:'#84cc16'},
+  {n:'Перекази людям',i:'↗️',c:'#94a3b8'},
+  {n:'Інше',i:'•',c:'#9ca3af'},
+  {n:'Зарплата',i:'💰',c:'#16a34a',k:'inc'},
+  {n:'Amazon / Payoneer',i:'📈',c:'#059669',k:'inc'},
+  {n:'Інший дохід',i:'➕',c:'#10b981',k:'inc'},
+  {n:'Між своїми рахунками',i:'🔄',c:'#475569',k:'tr'},
+];
+const TR = 'Між своїми рахунками';
+const MCC = {};
+const mccSet = (cat, list) => list.forEach(c => MCC[c] = cat);
+mccSet('Продукти',[5411,5412,5422,5441,5451,5462,5499,5300]);
+mccSet('Кафе і ресторани',[5812,5813,5814]);
+mccSet('Транспорт',[4111,4112,4121,4131,4784,4789,4011,3000,4511,4582]);
+mccSet('Авто і пальне',[5541,5542,5172,5983,7538,5533,7542,5511,5521,5532,7531,7534,7535,7549]);
+mccSet('Паркінг',[7523]);
+mccSet('Комунальні',[4900]);
+mccSet("Зв'язок та інтернет",[4812,4814,4816,4899]);
+mccSet('Дитина',[5641,5945,8351]);
+mccSet("Здоров'я",[5912,5122,8011,8021,8031,8041,8042,8043,8049,8050,8062,8071,8099,5975,5976]);
+mccSet('Одяг',[5611,5621,5631,5651,5655,5661,5691,5699,5948,5949]);
+mccSet('Дім',[5200,5211,5231,5251,5261,5712,5713,5714,5718,5719,5722,5950]);
+mccSet('Техніка',[5045,5732,5734,5735,5946]);
+mccSet('Покупки онлайн',[5964,5965,5966,5967,5968,5969,5310,5311,5331,5399,4215]);
+mccSet('Розваги',[7832,7841,7922,7929,7932,7933,7941,7991,7992,7994,7996,7997,7998,7999,5815,5816]);
+mccSet('Підписки',[5817,5818,4816]);
+mccSet('Подарунки',[5947,5992,5193]);
+mccSet('Податки і комісії',[9311,9222,9399,9211,9402]);
+mccSet('Готівка',[6010,6011]);
+mccSet('Перекази людям',[4829,6012,6538,6540]);
+
+// [keyword, category, sign(optional: 1 income only, -1 expense only)]
+const KW = [
+  ['переказ між власними',TR],['між власними рахунками',TR],['між своїми',TR],['з білої картки',TR],['з чорної картки',TR],
+  ['на білу картку',TR],['на чорну картку',TR],['з гривневого рахунку',TR],['з доларового рахунку',TR],['з єврового рахунку',TR],
+  ['на гривневий рахунок',TR],['на доларовий рахунок',TR],['конвертація',TR],['обмін валют',TR],['зі своєї картки',TR],['на свою картку',TR],
+  ['з банки',TR],['на банку',TR],['withdrawal to',TR],['transfer to bank',TR],['transfer to your bank',TR],['власних коштів',TR],
+  ['зарплат','Зарплата',1],['заробітн','Зарплата',1],['salary','Зарплата',1],['грошове забезпечення','Зарплата',1],
+  ['amazon','Amazon / Payoneer',1],['payoneer','Amazon / Payoneer',1],['кешбек','Інший дохід',1],['cashback','Інший дохід',1],
+  ['паркінг','Паркінг'],['parking','Паркінг'],['паркування','Паркінг'],
+  ['сільпо','Продукти'],['silpo','Продукти'],['атб','Продукти'],['atb','Продукти'],['novus','Продукти'],['фора','Продукти'],['fora','Продукти'],
+  ['metro','Продукти'],['varus','Продукти'],['ашан','Продукти'],['auchan','Продукти'],['велмарт','Продукти'],['наш край','Продукти'],['таврія','Продукти'],
+  ['аптека','Здоров\'я'],['apteka','Здоров\'я'],['аптеки','Здоров\'я'],['подорожник','Здоров\'я'],['синево','Здоров\'я'],['dila','Здоров\'я'],
+  ['uber','Транспорт'],['bolt','Транспорт'],['uklon','Транспорт'],['укрзалізниця','Транспорт'],['uz.gov','Транспорт'],
+  ['okko','Авто і пальне'],['wog','Авто і пальне'],['socar','Авто і пальне'],['upg','Авто і пальне'],['shell','Авто і пальне'],['brsm','Авто і пальне'],
+  ['netflix','Підписки'],['spotify','Підписки'],['youtube','Підписки'],['apple.com','Підписки'],['google','Підписки'],['icloud','Підписки'],
+  ['claude','Підписки'],['anthropic','Підписки'],['openai','Підписки'],['chatgpt','Підписки'],['megogo','Підписки'],['sweet.tv','Підписки'],
+  ['київстар','Зв\'язок та інтернет'],['kyivstar','Зв\'язок та інтернет'],['vodafone','Зв\'язок та інтернет'],['lifecell','Зв\'язок та інтернет'],['поповнення мобільного','Зв\'язок та інтернет'],
+  ['rozetka','Покупки онлайн'],['prom.ua','Покупки онлайн'],['aliexpress','Покупки онлайн'],['temu','Покупки онлайн'],['нова пошта','Покупки онлайн'],['nova poshta','Покупки онлайн'],['makeup','Покупки онлайн'],
+  ['епіцентр','Дім'],['epicentr','Дім'],['jysk','Дім'],['ikea','Дім'],['comfy','Техніка'],['фокстрот','Техніка'],['allo','Техніка'],
+  ['антошка','Дитина'],['antoshka','Дитина'],['будинок іграшок','Дитина'],['дитяч','Дитина'],['pampers','Дитина'],['kids','Дитина'],
+  ['комісія','Податки і комісії'],['commission','Податки і комісії'],[' fee','Податки і комісії'],['податок','Податки і комісії'],['єдиний внесок','Податки і комісії'],
+  ['зняття готівки','Готівка'],['банкомат','Готівка'],['atm','Готівка'],
+  ['комунал','Комунальні'],['кияненерго','Комунальні'],['енерго','Комунальні'],['газ','Комунальні'],['водоканал','Комунальні'],['осбб','Комунальні'],
+];
+// Privat24 bank categories → our categories
+const BANKCAT = [
+  ['продукт','Продукти'],['супермаркет','Продукти'],['кафе','Кафе і ресторани'],['ресторан','Кафе і ресторани'],['фастфуд','Кафе і ресторани'],
+  ['таксі','Транспорт'],['транспорт','Транспорт'],['азс','Авто і пальне'],['пальне','Авто і пальне'],['авто','Авто і пальне'],
+  ['комунал','Комунальні'],['мобільн','Зв\'язок та інтернет'],['зв\'язок','Зв\'язок та інтернет'],['інтернет-магазин','Покупки онлайн'],['інтернет','Зв\'язок та інтернет'],
+  ['аптек','Здоров\'я'],['медиц','Здоров\'я'],['здоров','Здоров\'я'],['одяг','Одяг'],['взуття','Одяг'],['дит','Дитина'],['розваг','Розваги'],['кіно','Розваги'],
+  ['готівк','Готівка'],['переказ','Перекази людям'],['комісі','Податки і комісії'],['подарун','Подарунки'],['дім','Дім'],['техн','Техніка'],['підписк','Підписки'],
+];
+const BANKS = {
+  mono:{n:'Monobank',i:'🐈‍⬛'}, privat:{n:'ПриватБанк',i:'🟢'}, payoneer:{n:'Payoneer',i:'🟠'},
+  cash:{n:'Готівка',i:'💵'}, other:{n:'Інший',i:'🏦'}
+};
+const CUR_NUM = {980:'UAH',840:'USD',978:'EUR',985:'PLN',826:'GBP',203:'CZK',756:'CHF'};
+const SYM = {UAH:'₴',USD:'$',EUR:'€',GBP:'£',PLN:'zł'};
+const MONO_TYPES = {black:'Чорна',white:'Біла',platinum:'Platinum',iron:'Iron',fop:'ФОП',yellow:'Жовта',eAid:'єПідтримка',madeInUkraine:'Зроблено в Україні',rebuilding:'Відновлення'};
+
+/* ============ Helpers ============ */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const isoLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const isoUTC = d => `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+const ym = (y,m) => `${y}-${pad(m+1)}`;
+const dim = (y,m) => new Date(y, m+1, 0).getDate();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function hash(s){ let h = 5381; for (let i=0;i<s.length;i++) h = ((h<<5)+h + s.charCodeAt(i)) | 0; return (h>>>0).toString(36); }
+const nf0 = new Intl.NumberFormat('uk-UA',{maximumFractionDigits:0});
+const nf2 = new Intl.NumberFormat('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});
+function money(n, cur='UAH', dec){
+  if (n == null || isNaN(n)) return '—';
+  const d = dec ?? (Math.abs(n) < 1000 && Math.round(n) !== Math.round(n*100)/100);
+  const s = (d ? nf2 : nf0).format(Math.abs(n));
+  const sign = n < 0 ? '−' : '';
+  if (['USD','EUR','GBP'].includes(cur)) return `${sign}${SYM[cur]}${s}`;
+  return `${sign}${s} ${SYM[cur] || cur}`;
+}
+function toast(msg, ms=2600){
+  document.querySelectorAll('.toast').forEach(x => x.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
+}
+const MONTHS = ['січень','лютий','березень','квітень','травень','червень','липень','серпень','вересень','жовтень','листопад','грудень'];
+const MSHORT = ['січ','лют','бер','кві','тра','чер','лип','сер','вер','жов','лис','гру'];
+
+/* ============ State ============ */
+let S;
+const now0 = new Date();
+const UI = { tab:'home', y:now0.getFullYear(), m:now0.getMonth(), f:{acc:'',cat:'',q:'',type:'',all:false}, limit:200 };
+function defaults(){
+  return {
+    v:1, savedAt:0, accounts:[], tx:[], rules:[], cats:[],
+    recurring:[
+      {id:uid(),name:'Паркінг №1',amount:4500,currency:'UAH',day:17,cat:'Паркінг',match:'',paid:{}},
+      {id:uid(),name:'Паркінг №2',amount:6000,currency:'UAH',day:18,cat:'Паркінг',match:'',paid:{}},
+    ],
+    rates:{USD:41.5,EUR:48,PLN:11.3,GBP:55,at:0,manual:false},
+    plan:{salary:53000,salaryCur:'UAH',biz:2000,bizCur:'USD',save:0},
+    goals:[],
+  };
+}
+let saveT;
+function save(){ S.savedAt = Date.now(); clearTimeout(saveT); saveT = setTimeout(() => Store.save(JSON.stringify(S)), 300); }
+const allCats = () => CATS.concat(S.cats || []);
+const catInfo = n => allCats().find(c => c.n === n) || {n, i:'•', c:'#9ca3af'};
+const catKind = n => catInfo(n).k || 'exp';
+const accById = id => S.accounts.find(a => a.id === id);
+const rate = cur => cur === 'UAH' ? 1 : (S.rates[cur] || 0);
+const toUAH = (a, cur) => a * rate(cur);
+const conv = (a, from, to) => from === to ? a : toUAH(a, from) / (rate(to) || 1);
+
+/* ============ Categorisation ============ */
+function autoCat(desc, amount, mcc, bankCat){
+  const d = ' ' + String(desc || '').toLowerCase();
+  const sg = Math.sign(amount);
+  for (const r of S.rules) if (r.match && d.includes(r.match) && (!r.sign || r.sign === sg)) return r.cat;
+  for (const [kw, cat, s] of KW) {
+    if (!d.includes(kw)) continue;
+    if (s && s !== sg) continue;
+    if (!s && sg > 0 && catKind(cat) === 'exp') continue; // expense keyword on incoming money – skip
+    return cat;
+  }
+  if (sg > 0) return 'Інший дохід';
+  if (mcc && MCC[mcc]) return MCC[mcc];
+  const bc = String(bankCat || '').toLowerCase();
+  if (bc) for (const [kw, cat] of BANKCAT) if (bc.includes(kw)) return cat;
+  return 'Інше';
+}
+
+/* ============ Parsing ============ */
+function parseNum(v){
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  let s = String(v).trim();
+  let neg = /^\(.*\)$/.test(s);
+  s = s.replace(/[\s  ]/g,'').replace(/[−–—]/g,'-').replace(/[^0-9,.\-+]/g,'');
+  if (!s || s === '-' || s === '+') return null;
+  const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+  if (lc > -1 && ld > -1) s = lc > ld ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
+  else if (lc > -1) s = (s.match(/,/g).length > 1) ? s.replace(/,/g,'') : s.replace(',','.');
+  else if ((s.match(/\./g)||[]).length > 1) s = s.replace(/\./g,'');
+  const n = parseFloat(s);
+  if (isNaN(n)) return null;
+  return neg ? -Math.abs(n) : n;
+}
+const MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function parseDate(v){
+  if (v == null || v === '') return null;
+  if (v instanceof Date) return isNaN(v) ? null : isoLocal(v);
+  if (typeof v === 'number') return (v > 20000 && v < 80000) ? isoUTC(new Date(Math.round((v - 25569) * 86400000))) : null;
+  const s = String(v).trim();
+  let m, Y, M, D, h = 0, mi = 0, se = 0;
+  const t = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if (t) { h = +t[1]; mi = +t[2]; se = +(t[3]||0); if (t[4]) { const pm = /pm/i.test(t[4]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; } }
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) { Y=+m[1]; M=+m[2]; D=+m[3]; }
+  else if ((m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/))) { D=+m[1]; M=+m[2]; Y=+m[3]; }
+  else if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) { const a=+m[1], b=+m[2]; Y=+m[3]; if (a > 12) { D=a; M=b; } else { M=a; D=b; } }
+  else if ((m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/))) { M=MON[m[1].toLowerCase()]; D=+m[2]; Y=+m[3]; }
+  else if ((m = s.match(/(\d{1,2})[\s-]+([A-Za-z]{3})[a-z]*\.?,?[\s-]+(\d{4})/))) { D=+m[1]; M=MON[m[2].toLowerCase()]; Y=+m[3]; }
+  else return null;
+  if (Y < 100) Y += 2000;
+  if (!M || !D || M > 12 || D > 31 || Y < 2000 || Y > 2100) return null;
+  return `${Y}-${pad(M)}-${pad(D)}T${pad(h)}:${pad(mi)}:${pad(se)}`;
+}
+function normCur(v){
+  if (v == null) return '';
+  const s = String(v).trim().toUpperCase();
+  if (!s) return '';
+  if (CUR_NUM[+s]) return CUR_NUM[+s];
+  if (/UAH|ГРН|₴/.test(s)) return 'UAH';
+  if (/USD|\$|ДОЛ/.test(s)) return 'USD';
+  if (/EUR|€|ЄВРО/.test(s)) return 'EUR';
+  if (/PLN|ZŁ|ЗЛОТ/.test(s)) return 'PLN';
+  if (/GBP|£/.test(s)) return 'GBP';
+  return /^[A-Z]{3}$/.test(s) ? s : '';
+}
+function parseCSV(text){
+  text = text.replace(/^﻿/, '');
+  const head = text.split(/\r?\n/).slice(0, 15).join('\n').replace(/"[^"]*"/g, '');
+  const cnt = d => head.split(d).length - 1;
+  const delim = [';', ',', '\t'].sort((a, b) => cnt(b) - cnt(a))[0];
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i+1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(f); f = ''; }
+    else if (ch === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (ch !== '\r') f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+let xlsxP;
+function loadXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  return xlsxP ||= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.onload = res; s.onerror = () => rej(new Error('Не вдалося завантажити модуль Excel'));
+    document.head.appendChild(s);
+  });
+}
+async function readRows(file){
+  const name = file.name.toLowerCase();
+  const buf = await file.arrayBuffer();
+  if (/\.(xlsx|xls|xlsm|ods)$/.test(name)) {
+    await loadXLSX();
+    const wb = XLSX.read(buf, {type:'array', cellDates:true});
+    let best = [];
+    for (const sn of wb.SheetNames) {
+      const r = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:''});
+      if (r.length > best.length) best = r;
+    }
+    return best;
+  }
+  let text;
+  try { text = new TextDecoder('utf-8', {fatal:true}).decode(buf); }
+  catch(e) { text = new TextDecoder('windows-1251').decode(buf); }
+  return parseCSV(text);
+}
+const FIELDS = {
+  date:['дата і час операції','дата i час операції','дата та час операції','дата операції','дата і час','дата','date','transaction date','posting date'],
+  desc:['деталі операції','опис операції','призначення платежу','призначення','опис','деталі','description','details','merchant','назва'],
+  opAmount:['сума в валюті операції','сума в валюті транзакції','original amount'],
+  opCurrency:['валюта операції','валюта транзакції','original currency'],
+  amount:['сума в валюті картки','сума в валюті рахунку','сума операції','сума','amount','net amount'],
+  currency:['валюта картки','валюта рахунку','currency','валюта'],
+  credit:['надходження','зарахування','credit','прихід'],
+  debit:['витрата','списання','debit','розхід'],
+  mcc:['mcc'],
+  bankCat:['категорія','category','type'],
+  balance:['залишок після операції','залишок на кінець періоду','залишок','balance','running balance'],
+  card:['картка','номер картки','card'],
+  status:['статус','status'],
+};
+const FIELD_LABELS = {date:'Дата *',desc:'Опис',amount:'Сума *',currency:'Валюта рахунку',balance:'Залишок',card:'Картка/рахунок',mcc:'MCC',bankCat:'Категорія банку',credit:'Надходження',debit:'Витрата',status:'Статус',opAmount:'Сума в валюті операції',opCurrency:'Валюта операції'};
+const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+function mapHeader(hdr){
+  const h = hdr.map(norm), used = new Set(), map = {};
+  const order = ['opAmount','opCurrency','date','desc','mcc','balance','card','status','credit','debit','amount','bankCat','currency'];
+  for (const f of order) {
+    let best = -1, bl = 0;
+    h.forEach((col, i) => {
+      if (used.has(i) || !col) return;
+      for (const syn of FIELDS[f]) if ((col === syn || col.startsWith(syn)) && syn.length > bl) { best = i; bl = syn.length; }
+    });
+    if (best >= 0) { map[f] = best; used.add(best); }
+  }
+  if (map.currency != null && map.opAmount != null && map.opCurrency == null && h[map.currency] === 'валюта') { map.opCurrency = map.currency; delete map.currency; }
+  return map;
+}
+function detectHeader(rows){
+  let bi = 0, bs = -1, bm = {};
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
+    const m = mapHeader(rows[i].map(String));
+    const ok = m.date != null && (m.amount != null || m.credit != null || m.debit != null);
+    const sc = Object.keys(m).length + (ok ? 10 : 0);
+    if (sc > bs) { bs = sc; bi = i; bm = m; }
+  }
+  return {hi: bi, map: bm};
+}
+function guessBank(hdr, fname){
+  const h = hdr.map(norm).join('|'), f = (fname || '').toLowerCase();
+  if (/mono/.test(f) || (h.includes('mcc') && h.includes('кешбек'))) return 'mono';
+  if (/privat|приват|p24/.test(f) || h.includes('картка') || h.includes('категорія')) return 'privat';
+  if (/payoneer/.test(f) || /description|transaction date/.test(h)) return 'payoneer';
+  return 'other';
+}
+function extract(rows, hi, map, invert){
+  const hdr = rows[hi] || [];
+  let fileCur = '';
+  if (map.amount != null) { const mm = String(hdr[map.amount]).match(/\(([A-Za-z]{3})\)/); if (mm) fileCur = mm[1].toUpperCase(); }
+  const out = [];
+  for (let r = hi + 1; r < rows.length; r++) {
+    const row = rows[r], g = k => map[k] != null ? row[map[k]] : undefined;
+    const date = parseDate(g('date')); if (!date) continue;
+    let amount = map.amount != null ? parseNum(g('amount')) : null;
+    if (amount == null && (map.credit != null || map.debit != null)) {
+      const c = parseNum(g('credit')) || 0, d = parseNum(g('debit')) || 0;
+      if (!c && !d) continue;
+      amount = c - Math.abs(d);
+    }
+    if (amount == null) continue;
+    if (/cancel|fail|declin|reject|скасов|відхил/.test(norm(g('status')))) continue;
+    if (invert) amount = -amount;
+    out.push({
+      date, amount,
+      desc: String(g('desc') ?? '').trim(),
+      currency: normCur(g('currency')) || fileCur,
+      opAmount: parseNum(g('opAmount')), opCurrency: normCur(g('opCurrency')),
+      mcc: parseInt(g('mcc')) || null, bankCat: String(g('bankCat') ?? '').trim(),
+      balance: parseNum(g('balance')), card: String(g('card') ?? '').trim(),
+    });
+  }
+  return out;
+}
+
+/* ============ Statistics ============ */
+function inMonth(t, y, m){ return +t.date.slice(0,4) === y && +t.date.slice(5,7) === m + 1; }
+function monthStats(y, m){
+  let inc = 0, exp = 0; const cats = {};
+  for (const t of S.tx) {
+    if (!inMonth(t, y, m)) continue;
+    const k = catKind(t.cat); if (k === 'tr') continue;
+    const v = toUAH(t.amount, t.currency);
+    if (k === 'inc') inc += v;
+    else { exp -= v; cats[t.cat] = (cats[t.cat] || 0) - v; }
+  }
+  return {inc, exp, cats};
+}
+function totals(){
+  let uah = 0; const by = {};
+  for (const a of S.accounts) {
+    if (a.inTotal === false || a.balance == null) continue;
+    const v = toUAH(a.balance, a.currency); uah += v;
+    by[a.bank] = (by[a.bank] || 0) + v;
+  }
+  return {uah, by};
+}
+function recStatus(r, y, m){
+  const key = ym(y, m), day = Math.min(r.day, dim(y, m));
+  const due = new Date(y, m, day);
+  if (r.paid && r.paid[key]) return {st:'ok', due, tx:null, manual:true};
+  const amt = Math.abs(r.amount), tol = Math.max(1, amt * 0.03), mt = (r.match || '').toLowerCase();
+  const tx = S.tx.find(t => {
+    if (t.amount >= 0 || !inMonth(t, y, m)) return false;
+    const d = +t.date.slice(8, 10);
+    if (mt && t.desc.toLowerCase().includes(mt)) return Math.abs(d - day) <= 10;
+    if (Math.abs(d - day) > 5) return false;
+    return Math.abs(conv(Math.abs(t.amount), t.currency, r.currency) - amt) <= tol;
+  });
+  if (tx) return {st:'ok', due, tx};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = Math.round((due - today) / 864e5);
+  return {st: days < 0 ? 'late' : 'due', due, days};
+}
+
+/* ============ Dashboard helpers ============ */
+const MONTHS_GEN = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+const MONTHS_GEN2 = MONTHS_GEN;
+const kfmt = v => { const a = Math.abs(v), sg = v < 0 ? '−' : ''; return sg + (a >= 1000 ? (a / 1000).toFixed(a >= 10000 ? 0 : 1).replace('.', ',') + 'k' : String(Math.round(a))); };
+const fmtMonth = s => { if (!s) return ''; const [y, m] = s.split('-').map(Number); return `${MONTHS_GEN[m-1]} ${y}`; };
+function capitalAtEnd(y, m){
+  const end = `${y}-${pad(m+1)}-${pad(dim(y, m))}T23:59:59`;
+  let v = 0;
+  for (const a of S.accounts) {
+    if (a.inTotal === false || a.balance == null) continue;
+    let bal = a.balance; const bd = a.balanceDate || '9999';
+    for (const t of S.tx) if (t.acc === a.id && t.date > end && t.date <= bd) bal -= t.amount;
+    v += toUAH(bal, a.currency);
+  }
+  return v;
+}
+function capitalHistory(n){
+  const now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
+  // start where every account with a balance already has data, so the reconstruction is complete
+  let first = '';
+  for (const a of S.accounts) {
+    if (a.inTotal === false || a.balance == null) continue;
+    const f = S.tx.reduce((m, t) => t.acc === a.id && (!m || t.date < m) ? t.date : m, '');
+    if (f && f > first) first = f;
+  }
+  let startIdx = cy * 12 + cm - (n - 1);
+  if (first) startIdx = Math.max(startIdx, (+first.slice(0,4)) * 12 + (+first.slice(5,7) - 1) - 1);
+  else startIdx = cy * 12 + cm;
+  const pts = [];
+  for (let i = startIdx; i <= cy * 12 + cm; i++) {
+    const y = Math.floor(i / 12), m = i % 12;
+    pts.push({l: MSHORT[m], v: i === cy * 12 + cm ? totals().uah : capitalAtEnd(y, m), f: false});
+  }
+  return pts;
+}
+function expUpTo(y, m, day){
+  let s = 0;
+  for (const t of S.tx) { if (!inMonth(t, y, m) || +t.date.slice(8,10) > day || catKind(t.cat) !== 'exp') continue; s -= toUAH(t.amount, t.currency); }
+  return s;
+}
+let LAST_AVGNET = 0;
+function forecast(){
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth(), d = now.getDate(), D = dim(y, m);
+  const T = totals(), st = monthStats(y, m), plan = S.plan || {};
+  const planInc = toUAH(plan.salary || 0, plan.salaryCur || 'UAH') + toUAH(plan.biz || 0, plan.bizCur || 'USD');
+  const recTot = S.recurring.reduce((s, r) => s + toUAH(r.amount, r.currency), 0);
+  let recPaid = 0, recUnpaid = 0;
+  for (const r of S.recurring) { const v = toUAH(r.amount, r.currency); if (recStatus(r, y, m).st === 'ok') recPaid += v; else recUnpaid += v; }
+  const variable = Math.max(0, st.exp - recPaid);
+  const daysLeft = D - d + 1;
+  const hist = [];
+  for (let i = 1; i <= 3; i++) { let mm = m - i, yy = y; if (mm < 0) { mm += 12; yy--; } if (S.tx.some(t => inMonth(t, yy, mm))) hist.push(monthStats(yy, mm)); }
+  const histVar = hist.length ? Math.max(0, hist.reduce((s, h) => s + h.exp, 0) / hist.length - recTot) : null;
+  const pace = d >= 5 || histVar == null ? variable / d : histVar / 30;
+  const projInc = Math.max(st.inc, planInc);
+  const endOfMonth = T.uah + (projInc - st.inc) - (pace * (D - d) + recUnpaid);
+  const perDay = (projInc - (plan.save || 0) - recTot - variable) / daysLeft;
+  let avgNet, src;
+  if (hist.length) { avgNet = hist.reduce((s, h) => s + h.inc - h.exp, 0) / hist.length; src = `середнє за ${hist.length} міс.`; }
+  else { avgNet = planInc - recTot - pace * 30; src = 'за планом і темпом витрат'; }
+  LAST_AVGNET = avgNet;
+  const months = Array.from({length: 12}, (_, i) => endOfMonth + avgNet * (i + 1));
+  return {endOfMonth, perDay, daysLeft, avgNet, src, months, planInc, recTot};
+}
+function goalProgress(g){
+  const saved = g.accs && g.accs.length
+    ? g.accs.reduce((s, id) => { const a = accById(id); return s + (a && a.balance != null ? conv(a.balance, a.currency, g.currency) : 0); }, 0)
+    : (g.saved || 0);
+  const pct = g.target > 0 ? Math.min(1, Math.max(0, saved / g.target)) : 0;
+  const now = new Date(); let monthsLeft = 0, perMonth = 0, eta = '';
+  if (g.deadline) { const [dy, dm] = g.deadline.split('-').map(Number); monthsLeft = Math.max(0, (dy - now.getFullYear()) * 12 + (dm - 1 - now.getMonth())); if (monthsLeft) perMonth = Math.max(0, (g.target - saved) / monthsLeft); }
+  if (!monthsLeft && LAST_AVGNET > 0 && saved < g.target) {
+    const k = Math.ceil((g.target - saved) / conv(LAST_AVGNET, 'UAH', g.currency));
+    const e = new Date(now.getFullYear(), now.getMonth() + k, 1); eta = `≈ ${MONTHS[e.getMonth()]} ${e.getFullYear()}`;
+  }
+  return {saved, pct, perMonth, monthsLeft, eta};
+}
+function ring(p, color){
+  const R = 19, C = 2 * Math.PI * R;
+  return `<svg width="50" height="50" viewBox="0 0 50 50" style="flex:none"><circle r="${R}" cx="25" cy="25" fill="none" stroke="var(--sep)" stroke-width="6"/><circle r="${R}" cx="25" cy="25" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * p).toFixed(1)} ${C}" transform="rotate(-90 25 25)"/><text x="25" y="29" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${Math.round(p*100)}%</text></svg>`;
+}
+function lineChart(pts){
+  const W = 320, H = 140, PX = 8, PT = 18, PB = 8;
+  const vs = pts.map(p => p.v); let mn = Math.min(...vs), mx = Math.max(...vs);
+  if (mx - mn < 1) { mx += 1; mn -= 1; } const pd = (mx - mn) * 0.1; mn -= pd; mx += pd;
+  const x = i => PX + (W - 2 * PX) * i / Math.max(1, pts.length - 1), y = v => PT + (H - PT - PB) * (1 - (v - mn) / (mx - mn));
+  const P = pts.map((p, i) => ({...p, i}));
+  const fact = P.filter(p => !p.f), fc = P.filter(p => p.f);
+  const last = fact[fact.length - 1];
+  if (fc.length && last) fc.unshift(last);
+  const path = a => a.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+  const area = fact.length > 1 ? `${path(fact)}L${x(last.i).toFixed(1)},${H}L${x(fact[0].i).toFixed(1)},${H}Z` : '';
+  const lbl = (p, anchor) => `<text x="${x(p.i).toFixed(1)}" y="${(y(p.v) - 7).toFixed(1)}" text-anchor="${anchor}" font-size="10" font-weight="600" fill="currentColor">${kfmt(p.v)}</text>`;
+  const endF = fc[fc.length - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;color:var(--text)">
+    <defs><linearGradient id="lg1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--btn)" stop-opacity=".35"/><stop offset="1" stop-color="var(--btn)" stop-opacity="0"/></linearGradient></defs>
+    ${[0.25, 0.5, 0.75].map(k => `<line x1="0" x2="${W}" y1="${PT + (H-PT-PB)*k}" y2="${PT + (H-PT-PB)*k}" stroke="var(--sep)" stroke-width="1"/>`).join('')}
+    ${area ? `<path d="${area}" fill="url(#lg1)"/>` : ''}
+    <path d="${path(fact)}" fill="none" stroke="var(--btn)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${fc.length > 1 ? `<path d="${path(fc)}" fill="none" stroke="var(--btn)" stroke-width="2" stroke-dasharray="5 5" opacity=".7"/>` : ''}
+    ${last ? `<circle cx="${x(last.i)}" cy="${y(last.v)}" r="4.5" fill="var(--btn)" stroke="var(--card)" stroke-width="2"/>${lbl(last, fc.length > 1 ? 'middle' : 'end')}` : ''}
+    ${fact.length > 1 ? lbl(fact[0], 'start') : ''}
+    ${fc.length > 1 ? `<circle cx="${x(endF.i)}" cy="${y(endF.v)}" r="3.5" fill="var(--card)" stroke="var(--btn)" stroke-width="2"/>${lbl(endF, 'end')}` : ''}
+  </svg>
+  <div class="xl">${pts.map((p, i) => `<span style="${p.f ? 'opacity:.6' : ''}">${pts.length > 9 && i % 2 ? '' : p.l}</span>`).join('')}</div>`;
+}
+function upcomingPayments(days){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const out = [];
+  for (const r of S.recurring) for (let k = 0; k <= 1; k++) {
+    const y = today.getFullYear(), m = today.getMonth() + k, d = new Date(y, m, 1);
+    const yy = d.getFullYear(), mm = d.getMonth();
+    const due = new Date(yy, mm, Math.min(r.day, dim(yy, mm)));
+    const dd = Math.round((due - today) / 864e5);
+    if (dd < 0 || dd > days) continue;
+    if (recStatus(r, yy, mm).st === 'ok') continue;
+    out.push({r, date: due, days: dd});
+  }
+  return out.sort((a, b) => a.days - b.days);
+}
+function planSheet(){
+  const p = S.plan || {};
+  const curSel = (id, v) => `<select id="${id}" style="width:90px">${['UAH','USD','EUR'].map(c => `<option ${v===c?'selected':''}>${c}</option>`).join('')}</select>`;
+  openSheet(`<h3>🎯 План доходів і заощаджень</h3>
+    <p class="hint small" style="margin-top:4px">Потрібно для прогнозу і ліміту «можна витрачати на день». Коли накопичиться кілька місяців операцій, прогноз рахуватиметься за фактичними даними.</p>
+    <label class="f">Зарплата на місяць</label><div class="row"><input id="p_sal" type="number" value="${p.salary || ''}">${curSel('p_salc', p.salaryCur || 'UAH')}</div>
+    <label class="f">Дохід з бізнесу (Amazon) на місяць</label><div class="row"><input id="p_biz" type="number" value="${p.biz || ''}">${curSel('p_bizc', p.bizCur || 'USD')}</div>
+    <label class="f">Скільки хочу відкладати щомісяця, ₴</label><input id="p_save" type="number" value="${p.save || ''}" placeholder="Напр. 20000">
+    <div class="btns"><button class="btn" onclick="savePlan()">Зберегти</button></div>`);
+}
+function savePlan(){
+  S.plan = {salary: +$('#p_sal').value || 0, salaryCur: $('#p_salc').value, biz: +$('#p_biz').value || 0, bizCur: $('#p_bizc').value, save: +$('#p_save').value || 0};
+  save(); closeSheet(); render(); haptic('medium');
+}
+function goalSheet(id){
+  const g = id ? (S.goals || []).find(x => x.id === id) : null;
+  const linked = new Set(g ? g.accs || [] : []);
+  openSheet(`<h3>${g ? 'Ціль' : 'Нова ціль'}</h3>
+    <div class="row"><div style="width:70px"><label class="f">Іконка</label><input id="g_i" value="${esc(g ? g.icon : '🛡️')}"></div><div class="grow"><label class="f">Назва</label><input id="g_n" value="${esc(g ? g.name : '')}" placeholder="Подушка безпеки"></div></div>
+    <div class="row"><div class="grow"><label class="f">Сума цілі</label><input id="g_t" type="number" value="${g ? g.target : ''}"></div><div style="width:90px"><label class="f">Валюта</label><select id="g_c">${['UAH','USD','EUR'].map(c => `<option ${g && g.currency===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
+    <label class="f">Дедлайн (необов'язково)</label><input id="g_d" type="month" value="${g ? g.deadline || '' : ''}">
+    <label class="f">Рахунки, де лежать ці гроші</label>
+    ${S.accounts.map(a => `<label class="row small" style="margin:6px 0"><input type="checkbox" class="g_ck" value="${a.id}" ${linked.has(a.id)?'checked':''} style="width:auto"><span class="grow ellip">${esc(a.name)}</span><span>${money(a.balance, a.currency, true)}</span></label>`).join('') || '<div class="hint small">Рахунків ще немає</div>'}
+    <label class="f">…або вже накопичено вручну</label><input id="g_s" type="number" value="${g ? g.saved || '' : ''}">
+    <div class="btns"><button class="btn" onclick="saveGoal('${g ? g.id : ''}')">Зберегти</button></div>
+    ${g ? `<div class="btns"><button class="btn danger" onclick="delGoal('${g.id}')">Видалити ціль</button></div>` : ''}`);
+}
+function saveGoal(id){
+  const target = +$('#g_t').value; if (!target) return toast('Вкажіть суму цілі');
+  S.goals ||= [];
+  let g = id ? S.goals.find(x => x.id === id) : null;
+  if (!g) { g = {id: uid(), color: ['#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899'][S.goals.length % 5]}; S.goals.push(g); }
+  Object.assign(g, {icon: $('#g_i').value.trim() || '🎯', name: $('#g_n').value.trim() || 'Ціль', target, currency: $('#g_c').value,
+    deadline: $('#g_d').value, accs: [...document.querySelectorAll('.g_ck:checked')].map(c => c.value), saved: +$('#g_s').value || 0});
+  save(); closeSheet(); render(); haptic('medium');
+}
+async function delGoal(id){ if (!(await ask('Видалити ціль?'))) return; S.goals = S.goals.filter(x => x.id !== id); save(); closeSheet(); render(); }
+
+/* ============ Views ============ */
+function go(t){ UI.tab = t; UI.limit = 200; haptic(); render(); window.scrollTo(0, 0); }
+function render(){
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === UI.tab));
+  $('#view').innerHTML = VIEWS[UI.tab]();
+}
+function shiftMonth(d){ let m = UI.m + d, y = UI.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } UI.y = y; UI.m = m; haptic(); render(); }
+const monthNav = () => `<div class="mnav"><button onclick="shiftMonth(-1)">‹</button><div class="t">${MONTHS[UI.m]} ${UI.y}</div><button onclick="shiftMonth(1)">›</button></div>`;
+
+function donut(items, total){
+  const R = 42, C = 2 * Math.PI * R; let off = 0;
+  const segs = items.map(it => {
+    const len = total > 0 ? (it.v / total) * C : 0;
+    const s = `<circle r="${R}" cx="55" cy="55" fill="none" stroke="${it.c}" stroke-width="16" stroke-dasharray="${Math.max(len-1.5,0)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 55 55)"/>`;
+    off += len; return s;
+  }).join('');
+  return `<svg width="110" height="110" viewBox="0 0 110 110" style="flex:none"><circle r="${R}" cx="55" cy="55" fill="none" stroke="var(--sep)" stroke-width="16"/>${segs}</svg>`;
+}
+
+const VIEWS = {
+home(){
+  const T = totals();
+  if (!S.accounts.length && !S.tx.length) {
+    return `<div class="hero" style="text-align:center;padding:26px 16px">
+      <div style="font-size:42px">💼</div><div class="mid" style="margin:8px 0 4px">Почнімо</div>
+      <div style="opacity:.85">Завантажте виписки з Привату, Монобанку чи Payoneer — або підключіть Monobank напряму.</div></div>
+      <div class="btns" style="flex-direction:column"><button class="btn" onclick="$('#fileIn').click()">📥 Завантажити виписку (CSV / Excel)</button>
+      <button class="btn sec" onclick="monoSheet()">🐈‍⬛ Підключити Monobank API</button>
+      <button class="btn sec" onclick="accSheet()">＋ Додати рахунок вручну</button>
+      <button class="btn sec" onclick="planSheet()">🎯 Вказати доходи і ціль заощаджень</button></div>` + recBlock();
+  }
+  const now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
+  const isCur = UI.y === cy && UI.m === cm;
+  const st = monthStats(UI.y, UI.m), net = st.inc - st.exp;
+  const usd = T.uah / (rate('USD') || 1);
+  // capital history + forecast
+  const F = forecast();
+  const hist = capitalHistory(UI.range || 6);
+  const pts = hist.concat(F.months.slice(0, UI.range === 12 ? 6 : 3).map((v, i) => { const d = new Date(cy, cm + i + 1, 1); return {l: MSHORT[d.getMonth()], v, f: true}; }));
+  const prevCap = capitalAtEnd(cm === 0 ? cy - 1 : cy, cm === 0 ? 11 : cm - 1);
+  const dCap = T.uah - prevCap;
+  // savings
+  const rateSav = st.inc > 0 ? net / st.inc : null;
+  const goals = (S.goals || []).map(g => ({g, ...goalProgress(g)}));
+  const jars = S.accounts.filter(a => a.jar && a.balance);
+  // pace vs last month
+  const day = isCur ? now.getDate() : dim(UI.y, UI.m);
+  const pm = UI.m === 0 ? 11 : UI.m - 1, py = UI.m === 0 ? UI.y - 1 : UI.y;
+  const lastSame = expUpTo(py, pm, Math.min(day, dim(py, pm)));
+  const pace = lastSame > 0 ? (st.exp / lastSame - 1) : null;
+  // categories
+  const cats = Object.entries(st.cats).filter(([,v]) => v > 0.5).sort((a,b) => b[1]-a[1]);
+  const top = cats.slice(0, 6).map(([n, v]) => ({n, v, c: catInfo(n).c}));
+  const rest = cats.slice(6).reduce((s, [,v]) => s + v, 0);
+  if (rest > 0) top.push({n:'Решта', v:rest, c:'#6b7280'});
+  const expTotal = top.reduce((s, x) => s + x.v, 0);
+  // net bars
+  const nb = []; for (let i = 5; i >= 0; i--) { let m = UI.m - i, y = UI.y; while (m < 0) { m += 12; y--; } const s = monthStats(y, m); nb.push({y, m, v: s.inc - s.exp}); }
+  const nmx = Math.max(1, ...nb.map(x => Math.abs(x.v)));
+  const upcoming = upcomingPayments(10);
+  const banks = Object.entries(T.by).sort((a,b) => b[1]-a[1]).map(([b, v]) => `<span class="hchip">${BANKS[b]?.i || '🏦'} ${money(v)}</span>`).join('');
+  const qEsc = s => esc(s).replace(/'/g, "\\'");
+
+  return `
+  <div class="hero">
+    <div class="row between"><span style="opacity:.8">Загальний капітал</span><button class="hbtn" onclick="planSheet()">🎯 План</button></div>
+    <div class="big" style="font-size:34px;margin-top:2px">${money(T.uah)}</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:2px">
+      <span class="delta ${dCap < 0 ? 'dn' : 'up'}">${dCap < 0 ? '▼' : '▲'} ${money(Math.abs(dCap))} за місяць</span>
+      <span style="opacity:.8;font-size:13px">≈ ${money(usd,'USD')}</span>
+    </div>
+    <div style="margin-top:10px">${banks}</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">💰 Заощаджено ${isCur ? 'цього місяця' : MONTHS[UI.m]}</div><div class="val ${net < 0 ? 'red' : 'pos'}">${net > 0 ? '+' : ''}${money(net)}</div><div class="sub">${rateSav == null ? 'доходів ще немає' : Math.round(rateSav * 100) + '% від доходів'}</div></div>
+    ${isCur ? `<div class="kpi"><div class="lbl">🟢 Можна витрачати</div><div class="val">${money(Math.max(0, F.perDay))}<span class="sub"> / день</span></div><div class="sub">ще ${F.daysLeft} дн. до кінця місяця</div></div>`
+      : `<div class="kpi"><div class="lbl">📉 Витрати</div><div class="val">${money(st.exp)}</div><div class="sub">доходи ${money(st.inc)}</div></div>`}
+    <div class="kpi"><div class="lbl">📅 Прогноз на 1 ${MONTHS_GEN[(cm + 1) % 12]}</div><div class="val">${money(F.endOfMonth)}</div><div class="sub">${F.endOfMonth - T.uah >= 0 ? '+' : ''}${money(F.endOfMonth - T.uah)} до сьогодні</div></div>
+    <div class="kpi"><div class="lbl">🚀 Через 12 місяців</div><div class="val">${money(F.months[11])}</div><div class="sub">${F.avgNet >= 0 ? '+' : ''}${money(F.avgNet)}/міс · ${F.src}</div></div>
+  </div>
+
+  <h2 class="row between"><span>Динаміка капіталу</span><span class="seg"><button class="${(UI.range||6)===6?'on':''}" onclick="UI.range=6;render()">6 міс</button><button class="${UI.range===12?'on':''}" onclick="UI.range=12;render()">12 міс</button></span></h2>
+  <div class="card">${pts.length >= 2 ? lineChart(pts) : '<div class="empty">Замало даних для графіка</div>'}
+    <div class="row small hint" style="gap:14px;margin-top:6px"><span><span class="dot" style="display:inline-block;background:var(--btn)"></span> факт</span><span><span class="dash"></span> прогноз</span><span class="grow" style="text-align:right">${F.src}</span></div>
+  </div>
+
+  <h2 class="row between"><span>Цілі й заощадження</span><button class="btn sm sec" onclick="goalSheet()">＋ Ціль</button></h2>
+  ${goals.length ? goals.map(({g, saved, pct, perMonth, monthsLeft, eta}) => `<div class="card goal" onclick="goalSheet('${g.id}')">
+      <div class="row">${ring(pct, g.color || 'var(--btn)')}<div class="grow"><div class="row between"><b class="ellip">${esc(g.icon || '🎯')} ${esc(g.name)}</b><span class="small hint">${Math.round(pct*100)}%</span></div>
+      <div class="small">${money(saved, g.currency)} <span class="hint">з ${money(g.target, g.currency)}</span></div>
+      <div class="small hint">${pct >= 1 ? '✅ Ціль досягнуто!' : monthsLeft ? `до ${fmtMonth(g.deadline)}: відкладати ${money(perMonth, g.currency)}/міс` : eta ? `за поточним темпом — ${eta}` : 'вкажіть дедлайн, щоб бачити план'}</div></div></div></div>`).join('')
+    : `<div class="card"><div class="row"><div style="font-size:30px">🎯</div><div class="grow small">Додайте ціль — подушку безпеки, відпустку чи внесок за житло. Прив'яжіть рахунки або банки Monobank, і прогрес рахуватиметься сам.</div></div></div>`}
+  ${jars.length ? `<div class="card list" style="padding:2px 14px">${jars.map(a => `<div class="it" onclick="accSheet('${a.id}')"><div class="ico" style="background:#f59e0b22">🫙</div><div class="grow ellip">${esc(a.name.replace('🫙 ',''))}</div><div class="amt">${money(a.balance, a.currency)}</div></div>`).join('')}</div>` : ''}
+  ${S.plan && S.plan.save ? `<div class="card"><div class="row between small"><span>Ціль заощаджень на місяць</span><b>${money(Math.max(0,net))} / ${money(S.plan.save)}</b></div><div class="bar"><i style="width:${Math.min(100, Math.max(0, net / S.plan.save * 100))}%;background:var(--green)"></i></div></div>` : ''}
+
+  ${upcoming.length ? `<h2>Найближчі платежі</h2><div class="card list" style="padding:2px 14px">${upcoming.map(u => `<div class="it" onclick="recSheet('${u.r.id}')"><div class="datebox"><b>${u.date.getDate()}</b><span>${MSHORT[u.date.getMonth()]}</span></div><div class="grow"><div class="ellip">${esc(u.r.name)}</div><div class="small hint">${u.days === 0 ? 'сьогодні' : u.days === 1 ? 'завтра' : 'через ' + u.days + ' дн'}</div></div><div class="amt">${money(u.r.amount, u.r.currency)}</div></div>`).join('')}
+    <div class="row between" style="padding:10px 0"><span class="hint small">Разом за 10 днів</span><b>${money(upcoming.reduce((s,u)=>s+toUAH(u.r.amount,u.r.currency),0))}</b></div></div>` : ''}
+
+  ${monthNav()}
+  <div class="card">
+    <div class="row between"><div><div class="hint small">Доходи</div><div class="mid pos">${money(st.inc)}</div></div><div style="text-align:right"><div class="hint small">Витрати</div><div class="mid">${money(st.exp)}</div></div></div>
+    <div class="bar" style="height:8px;margin-top:10px"><i style="width:${st.inc > 0 ? Math.min(100, st.exp / st.inc * 100) : (st.exp ? 100 : 0)}%;background:${st.exp > st.inc ? 'var(--red)' : 'var(--amber)'}"></i></div>
+    <div class="small hint" style="margin-top:6px">${st.inc > 0 ? `Витрачено ${Math.round(st.exp / st.inc * 100)}% доходів` : ''}${pace != null ? ` · ${pace > 0 ? '▲' : '▼'} ${Math.abs(Math.round(pace * 100))}% проти ${MONTHS_GEN2[pm]} на ${day}-те число` : ''}</div>
+  </div>
+
+  <h2>На що йдуть кошти</h2>
+  <div class="card">${top.length ? `<div class="donut">${donut(top, expTotal)}<div class="legend grow">${top.map(x => `<div class="lg" onclick="${x.n==='Решта'?'':`UI.f={acc:'',cat:'${qEsc(x.n)}',q:'',type:'',all:false};go('tx')`}"><span class="dot" style="background:${x.c}"></span><span class="grow ellip small">${esc(x.n)}</span><span class="small"><b>${money(x.v)}</b> <span class="hint">${Math.round(x.v/expTotal*100)}%</span></span></div>`).join('')}</div></div>` : `<div class="empty">Немає витрат за цей місяць</div>`}</div>
+
+  <h2>Заощадження по місяцях</h2>
+  <div class="card"><div class="nbars">${nb.map(x => `<div class="nc" onclick="UI.y=${x.y};UI.m=${x.m};render()"><div class="nv small ${x.v<0?'red':'pos'}">${x.v ? (x.v > 0 ? '+' : '−') + kfmt(Math.abs(x.v)) : '0'}</div><div class="nt"><i style="height:${Math.abs(x.v)/nmx*100}%;background:${x.v<0?'var(--red)':'var(--green)'};${x.y===UI.y&&x.m===UI.m?'':'opacity:.55'}"></i></div><span class="hint small">${MSHORT[x.m]}</span></div>`).join('')}</div></div>
+  ${recBlock()}`;
+},
+
+tx(){
+  const f = UI.f;
+  let list = S.tx.filter(t =>
+    (f.all || inMonth(t, UI.y, UI.m)) && (!f.acc || t.acc === f.acc) && (!f.cat || t.cat === f.cat) &&
+    (!f.type || (f.type === 'exp' ? (t.amount < 0 && catKind(t.cat) === 'exp') : f.type === 'inc' ? catKind(t.cat) === 'inc' : catKind(t.cat) === 'tr')) &&
+    (!f.q || (t.desc + ' ' + (t.note || '')).toLowerCase().includes(f.q.toLowerCase())));
+  list.sort((a, b) => b.date.localeCompare(a.date));
+  const sum = list.reduce((s, t) => s + (catKind(t.cat) === 'tr' ? 0 : toUAH(t.amount, t.currency)), 0);
+  const shown = list.slice(0, UI.limit);
+  const today = isoLocal(new Date()).slice(0, 10), yest = isoLocal(new Date(Date.now() - 864e5)).slice(0, 10);
+  let html = '', lastDay = '';
+  const dayTot = {}; for (const t of list) { const d = t.date.slice(0,10); if (catKind(t.cat) !== 'tr') dayTot[d] = (dayTot[d] || 0) + toUAH(t.amount, t.currency); }
+  for (const t of shown) {
+    const d = t.date.slice(0, 10);
+    if (d !== lastDay) {
+      if (lastDay) html += `</div>`;
+      const lbl = d === today ? 'Сьогодні' : d === yest ? 'Вчора' : new Date(d + 'T12:00').toLocaleDateString('uk-UA', {day:'numeric', month:'long', weekday:'short'});
+      html += `<div class="day"><span>${lbl}</span><span>${money(dayTot[d] || 0)}</span></div><div class="card list" style="padding:2px 14px">`;
+      lastDay = d;
+    }
+    html += txRow(t);
+  }
+  if (lastDay) html += `</div>`;
+  const accOpts = S.accounts.map(a => `<option value="${a.id}" ${f.acc===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
+  const catOpts = allCats().map(c => `<option ${f.cat===c.n?'selected':''}>${esc(c.n)}</option>`).join('');
+  return `${f.all ? '' : monthNav()}
+  <div class="filters">
+    <input placeholder="🔍 Пошук" value="${esc(f.q)}" onchange="UI.f.q=this.value;render()">
+    <select onchange="UI.f.type=this.value;render()"><option value="">Усі типи</option><option value="exp" ${f.type==='exp'?'selected':''}>Витрати</option><option value="inc" ${f.type==='inc'?'selected':''}>Доходи</option><option value="tr" ${f.type==='tr'?'selected':''}>Перекази між своїми</option></select>
+    <select onchange="UI.f.acc=this.value;render()"><option value="">Усі рахунки</option>${accOpts}</select>
+    <select onchange="UI.f.cat=this.value;render()"><option value="">Усі категорії</option>${catOpts}</select>
+    <select onchange="UI.f.all=this.value==='1';render()"><option value="0">Місяць</option><option value="1" ${f.all?'selected':''}>Увесь час</option></select>
+  </div>
+  <div class="row between" style="margin:0 4px 4px"><span class="hint small">${list.length} операцій · підсумок ${money(sum)}</span><button class="btn sm sec" onclick="txSheet()">＋ Операція</button></div>
+  ${html || '<div class="empty">Операцій не знайдено.<br>Завантажте виписку у вкладці «Рахунки».</div>'}
+  ${list.length > UI.limit ? `<button class="btn sec" onclick="UI.limit+=300;render()">Показати ще (${list.length - UI.limit})</button>` : ''}`;
+},
+
+rec(){
+  const total = S.recurring.reduce((s, r) => s + toUAH(Math.abs(r.amount), r.currency), 0);
+  return `${monthNav()}${recBlock(true)}
+  <div class="card"><div class="row between"><span class="hint">Разом обов'язкових на місяць</span><b>${money(total)}</b></div></div>
+  <button class="btn" onclick="recSheet()">＋ Додати повторюваний платіж</button>
+  <p class="hint small" style="margin:10px 4px">Платіж позначається оплаченим автоматично, якщо у виписці знайдено списання на ту ж суму (±3%) у межах ±5 днів від дати, або операцію з ключовим словом. Можна позначити вручну.</p>`;
+},
+
+acc(){
+  const T = totals();
+  const groups = {};
+  S.accounts.forEach(a => (groups[a.bank] ||= []).push(a));
+  const blocks = Object.entries(groups).map(([b, list]) => `<h2>${BANKS[b]?.i || '🏦'} ${BANKS[b]?.n || b}</h2><div class="card list" style="padding:2px 14px">${list.map(a => {
+    const last = S.tx.filter(t => t.acc === a.id).reduce((m, t) => t.date > m ? t.date : m, '');
+    const n = S.tx.filter(t => t.acc === a.id).length;
+    return `<div class="it" onclick="accSheet('${a.id}')"><div class="grow"><div class="ellip">${esc(a.name)} ${a.inTotal===false?'<span class="hint small">(не в сумі)</span>':''}</div><div class="hint small">${n} операцій${last ? ' · остання ' + last.slice(0,10).split('-').reverse().join('.') : ''}${a.balanceDate ? ' · залишок на ' + a.balanceDate.slice(0,10).split('-').reverse().join('.') : ''}</div></div>
+      <div class="amt">${money(a.balance, a.currency, true)}${a.currency !== 'UAH' && a.balance != null ? `<div class="hint small">${money(toUAH(a.balance, a.currency))}</div>` : ''}</div></div>`;
+  }).join('')}</div>`).join('');
+  return `<div class="card"><div class="hint">Разом на рахунках</div><div class="big">${money(T.uah)}</div><div class="hint">≈ ${money(T.uah / (rate('USD')||1), 'USD')} · ≈ ${money(T.uah / (rate('EUR')||1), 'EUR')}</div></div>
+  <div class="btns"><button class="btn" onclick="$('#fileIn').click()">📥 Імпорт виписки</button><button class="btn sec" onclick="monoSheet()">🐈‍⬛ Monobank</button></div>
+  <div class="btns"><button class="btn sec" onclick="accSheet()">＋ Рахунок</button></div>
+  ${blocks || '<div class="empty">Рахунків ще немає</div>'}
+  <h2>Як вивантажити виписку</h2>
+  <div class="card small">
+    <p style="margin-top:0"><b>Приват24:</b> Картки → обрати картку → Виписка → період → завантажити Excel або CSV. Можна одразу всі картки — застосунок розкладе їх по окремих рахунках.</p>
+    <p><b>Monobank:</b> у застосунку відкрити картку → Виписка → обрати період → CSV/Excel. Або підключити API кнопкою вище — тоді операції підтягуються самі.</p>
+    <p style="margin-bottom:0"><b>Payoneer:</b> Activity → Transactions → обрати період → Download (CSV). Кожна валюта стане окремим рахунком.</p>
+  </div>`;
+},
+
+more(){
+  const r = S.rates;
+  const rules = S.rules.map((x, i) => `<div class="it"><div class="grow ellip">«${esc(x.match)}» → ${catInfo(x.cat).i} ${esc(x.cat)}</div><button class="btn sm danger" onclick="S.rules.splice(${i},1);save();render()">✕</button></div>`).join('');
+  return `<h2>План</h2><div class="card"><button class="btn sec" onclick="planSheet()">🎯 Доходи і ціль заощаджень</button></div>
+  <h2>Курси валют (грн)</h2>
+  <div class="card">
+    ${['USD','EUR','PLN','GBP'].map(c => `<div class="row" style="margin-bottom:8px"><span style="width:50px">${c}</span><input type="number" step="0.01" value="${r[c] || ''}" onchange="S.rates['${c}']=parseFloat(this.value)||0;S.rates.manual=true;save()"></div>`).join('')}
+    <div class="hint small">${r.at ? 'Оновлено з НБУ: ' + new Date(r.at).toLocaleString('uk-UA') : 'Ще не оновлювалось'}${r.manual ? ' · змінено вручну' : ''}</div>
+    <div class="btns"><button class="btn sec" onclick="S.rates.manual=false;updateRates(true)">Оновити з НБУ</button></div>
+  </div>
+  <h2>Правила категорій</h2>
+  <div class="card list" style="padding:2px 14px">${rules || '<div class="hint" style="padding:12px 0">Правила створюються, коли змінюєте категорію операції з галочкою «застосувати до схожих».</div>'}</div>
+  <div class="btns"><button class="btn sec" onclick="recategorize()">Перерахувати категорії</button><button class="btn sec" onclick="catAddSheet()">＋ Категорія</button></div>
+  <h2>Резервна копія та синхронізація</h2>
+  <div class="card">
+    <div class="hint small">Дані зберігаються на цьому пристрої${Store.dev() ? ' (сховище Telegram)' : ''}. Хмара Telegram дозволяє відкрити ті самі дані на телефоні й комп'ютері.</div>
+    ${ver('6.9') ? `<div class="btns"><button class="btn sec" onclick="cloudSave()">☁️ Зберегти в хмару</button><button class="btn sec" onclick="cloudLoad()">⬇️ З хмари</button></div>` : ''}
+    <div class="btns"><button class="btn sec" onclick="exportBackup()">💾 Експорт JSON</button><button class="btn sec" onclick="$('#jsonIn').click()">📂 Імпорт JSON</button></div>
+    <div class="btns"><button class="btn sec" onclick="exportCSV()">📄 Операції в CSV</button></div>
+  </div>
+  <h2>Небезпечна зона</h2>
+  <div class="card"><button class="btn danger" onclick="wipe()">Видалити всі дані</button></div>
+  <p class="hint small" style="text-align:center">${S.tx.length} операцій · ${S.accounts.length} рахунків · v1</p>`;
+}
+};
+
+function txRow(t){
+  const c = catInfo(t.cat), a = accById(t.acc);
+  const op = t.opCurrency && t.opCurrency !== t.currency && t.opAmount ? `<div class="hint small">${money(t.opAmount, t.opCurrency, true)}</div>` : '';
+  const tr = catKind(t.cat) === 'tr';
+  return `<div class="it" onclick="txSheet('${t.id}')"><div class="ico" style="background:${c.c}22">${c.i}</div>
+    <div class="grow"><div class="ellip">${esc(t.desc || '(без опису)')}</div><div class="hint small ellip">${esc(t.cat)} · ${esc(a ? a.name : '?')}${t.note ? ' · ' + esc(t.note) : ''}</div></div>
+    <div class="amt ${t.amount > 0 && !tr ? 'pos' : tr ? 'hint' : ''}">${t.amount > 0 ? '+' : ''}${money(t.amount, t.currency, true)}${op}</div></div>`;
+}
+
+function recBlock(full){
+  const items = S.recurring.map(r => ({r, s: recStatus(r, UI.y, UI.m)})).sort((a, b) => a.r.day - b.r.day);
+  if (!items.length) return full ? '<div class="empty">Немає повторюваних платежів</div>' : '';
+  const left = items.filter(x => x.s.st !== 'ok').reduce((s, x) => s + toUAH(Math.abs(x.r.amount), x.r.currency), 0);
+  return `<h2>Повторювані платежі · ${MONTHS[UI.m]}</h2><div class="card list" style="padding:2px 14px">
+    ${items.map(({r, s}) => `<div class="it" onclick="recSheet('${r.id}')"><div class="ico" style="background:${catInfo(r.cat).c}22">${catInfo(r.cat).i}</div>
+      <div class="grow"><div class="ellip">${esc(r.name)}</div><div class="hint small">${r.day} числа · ${esc(r.cat)}</div></div>
+      <div class="amt">${money(r.amount, r.currency)}<div>${s.st === 'ok' ? '<span class="pill ok">оплачено</span>' : s.st === 'late' ? '<span class="pill late">прострочено</span>' : `<span class="pill due">${s.days === 0 ? 'сьогодні' : 'через ' + s.days + ' дн'}</span>`}</div></div></div>`).join('')}
+    <div class="row between" style="padding:10px 0"><span class="hint small">Ще сплатити цього місяця</span><b>${money(left)}</b></div></div>`;
+}
+
+/* ============ Sheets ============ */
+function openSheet(html){
+  closeSheet(true);
+  const bg = document.createElement('div'); bg.className = 'sheetbg'; bg.id = 'sheet';
+  bg.innerHTML = `<div class="sheet"><button class="x" onclick="closeSheet()">✕</button>${html}</div>`;
+  bg.addEventListener('click', e => { if (e.target === bg && !SHEET_LOCK) closeSheet(); });
+  document.body.appendChild(bg);
+  if (ver('6.1')) { tg.BackButton.show(); }
+}
+let SHEET_LOCK = false;
+function closeSheet(silent){
+  const s = $('#sheet'); if (s) s.remove();
+  if (!silent && ver('6.1')) tg.BackButton.hide();
+}
+if (inTG && ver('6.1')) tg.BackButton.onClick(() => { if (!SHEET_LOCK) closeSheet(); });
+
+function catSelect(sel, id='f_cat'){
+  return `<select id="${id}">${allCats().map(c => `<option ${c.n===sel?'selected':''}>${esc(c.n)}</option>`).join('')}</select>`;
+}
+function accSelect(sel, id='f_acc'){
+  return `<select id="${id}">${S.accounts.map(a => `<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.name)} (${a.currency})</option>`).join('')}</select>`;
+}
+function simplify(desc){
+  return String(desc || '').toLowerCase().replace(/[0-9*#№]+/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 3).join(' ');
+}
+
+function txSheet(id){
+  const t = id ? S.tx.find(x => x.id === id) : null;
+  if (!t && !S.accounts.length) { toast('Спершу додайте рахунок'); return accSheet(); }
+  if (t) {
+    const a = accById(t.acc);
+    openSheet(`<h3>${esc(t.desc || 'Операція')}</h3>
+      <div class="big ${t.amount>0?'pos':''}" style="font-size:26px">${t.amount>0?'+':''}${money(t.amount, t.currency, true)}</div>
+      <div class="hint small">${t.date.replace('T',' ').slice(0,16).split(' ').map((p,i)=>i?p:p.split('-').reverse().join('.')).join(' ')} · ${esc(a ? a.name : '')}${t.mcc ? ' · MCC ' + t.mcc : ''}${t.opCurrency && t.opCurrency !== t.currency ? ' · ' + money(t.opAmount, t.opCurrency, true) : ''}${t.bankCat ? ' · ' + esc(t.bankCat) : ''}</div>
+      <label class="f">Категорія</label>${catSelect(t.cat)}
+      <label class="f"><input type="checkbox" id="f_all" style="width:auto"> Застосувати до всіх схожих (ключове слово):</label>
+      <input id="f_kw" value="${esc(simplify(t.desc))}">
+      <label class="f">Нотатка</label><input id="f_note" value="${esc(t.note || '')}">
+      <div class="btns"><button class="btn" onclick="saveTx('${t.id}')">Зберегти</button></div>
+      <div class="btns"><button class="btn danger" onclick="delTx('${t.id}')">Видалити операцію</button></div>`);
+  } else {
+    openSheet(`<h3>Нова операція</h3>
+      <div class="btns" style="margin-top:0"><button class="btn sm sec" id="b_exp" onclick="this.className='btn sm';$('#b_inc').className='btn sm sec';window._sgn=-1">Витрата</button><button class="btn sm sec" id="b_inc" onclick="this.className='btn sm';$('#b_exp').className='btn sm sec';window._sgn=1">Дохід</button></div>
+      <label class="f">Сума</label><input id="f_amt" type="number" step="0.01" inputmode="decimal">
+      <label class="f">Рахунок</label>${accSelect(S.accounts[0].id)}
+      <label class="f">Категорія</label>${catSelect('Інше')}
+      <label class="f">Опис</label><input id="f_desc">
+      <label class="f">Дата</label><input id="f_date" type="datetime-local" value="${isoLocal(new Date()).slice(0,16)}">
+      <label class="f"><input type="checkbox" id="f_bal" checked style="width:auto"> Змінити залишок рахунку</label>
+      <div class="btns"><button class="btn" onclick="addTx()">Додати</button></div>`);
+    window._sgn = -1; $('#b_exp').className = 'btn sm';
+  }
+}
+function saveTx(id){
+  const t = S.tx.find(x => x.id === id); if (!t) return;
+  const cat = $('#f_cat').value; t.note = $('#f_note').value.trim();
+  t.cat = cat; t.locked = true;
+  if ($('#f_all').checked) {
+    const kw = $('#f_kw').value.trim().toLowerCase();
+    if (kw.length >= 3) {
+      S.rules = S.rules.filter(r => r.match !== kw);
+      S.rules.unshift({match: kw, cat, sign: catKind(cat) === 'inc' ? 1 : catKind(cat) === 'exp' ? -1 : 0});
+      let n = 0; for (const x of S.tx) if (x.desc.toLowerCase().includes(kw) && (catKind(cat) !== 'exp' || x.amount < 0) && (catKind(cat) !== 'inc' || x.amount > 0)) { x.cat = cat; n++; }
+      toast(`Правило створено, оновлено ${n} операцій`);
+    } else toast('Ключове слово занадто коротке');
+  }
+  save(); closeSheet(); render(); haptic('medium');
+}
+async function delTx(id){
+  if (!(await ask('Видалити цю операцію?'))) return;
+  S.tx = S.tx.filter(x => x.id !== id); save(); closeSheet(); render();
+}
+function addTx(){
+  const a = parseFloat($('#f_amt').value); if (!a) return toast('Вкажіть суму');
+  const acc = accById($('#f_acc').value);
+  const amount = Math.abs(a) * window._sgn;
+  const date = ($('#f_date').value || isoLocal(new Date()).slice(0,16)) + ':00';
+  S.tx.push({id: 'u_' + uid(), acc: acc.id, date, amount, currency: acc.currency, desc: $('#f_desc').value.trim(), cat: $('#f_cat').value, src: 'manual', locked: true});
+  if ($('#f_bal').checked && acc.balance != null) acc.balance = Math.round((acc.balance + amount) * 100) / 100;
+  else if ($('#f_bal').checked) acc.balance = amount;
+  save(); closeSheet(); render(); haptic('medium');
+}
+
+function accSheet(id){
+  const a = id ? accById(id) : null;
+  openSheet(`<h3>${a ? 'Рахунок' : 'Новий рахунок'}</h3>
+    <label class="f">Назва</label><input id="a_name" value="${esc(a ? a.name : '')}" placeholder="Напр. Приват Універсальна">
+    <label class="f">Банк</label><select id="a_bank">${Object.entries(BANKS).map(([k, b]) => `<option value="${k}" ${a && a.bank===k?'selected':''}>${b.i} ${b.n}</option>`).join('')}</select>
+    <label class="f">Валюта</label><select id="a_cur">${['UAH','USD','EUR','PLN','GBP'].map(c => `<option ${a && a.currency===c?'selected':''}>${c}</option>`).join('')}</select>
+    <label class="f">Поточний залишок</label><input id="a_bal" type="number" step="0.01" inputmode="decimal" value="${a && a.balance != null ? a.balance : ''}">
+    <label class="f"><input type="checkbox" id="a_in" ${!a || a.inTotal !== false ? 'checked' : ''} style="width:auto"> Враховувати в загальному капіталі</label>
+    <div class="btns"><button class="btn" onclick="saveAcc('${a ? a.id : ''}')">Зберегти</button></div>
+    ${a ? `<div class="btns"><button class="btn sec" onclick="UI.f={acc:'${a.id}',cat:'',q:'',type:'',all:true};closeSheet();go('tx')">Операції рахунку</button></div>
+    <div class="btns"><button class="btn danger" onclick="delAcc('${a.id}')">Видалити рахунок і його операції</button></div>` : ''}`);
+}
+function saveAcc(id){
+  const name = $('#a_name').value.trim() || 'Рахунок';
+  const balV = $('#a_bal').value;
+  let a = id ? accById(id) : null;
+  if (!a) { a = {id: uid(), importKey: ''}; S.accounts.push(a); }
+  const newBal = balV === '' ? null : parseFloat(balV);
+  if (newBal !== a.balance) a.balanceDate = isoLocal(new Date());
+  Object.assign(a, {name, bank: $('#a_bank').value, currency: $('#a_cur').value, balance: newBal, inTotal: $('#a_in').checked});
+  save(); closeSheet(); render(); haptic('medium');
+}
+async function delAcc(id){
+  if (!(await ask('Видалити рахунок разом з усіма його операціями?'))) return;
+  S.accounts = S.accounts.filter(a => a.id !== id); S.tx = S.tx.filter(t => t.acc !== id);
+  save(); closeSheet(); render();
+}
+
+function recSheet(id){
+  const r = id ? S.recurring.find(x => x.id === id) : null;
+  const key = ym(UI.y, UI.m), st = r ? recStatus(r, UI.y, UI.m) : null;
+  openSheet(`<h3>${r ? 'Повторюваний платіж' : 'Новий платіж'}</h3>
+    <label class="f">Назва</label><input id="r_name" value="${esc(r ? r.name : '')}" placeholder="Напр. Інтернет, Садочок, Кредит">
+    <div class="row"><div class="grow"><label class="f">Сума</label><input id="r_amt" type="number" step="0.01" inputmode="decimal" value="${r ? r.amount : ''}"></div>
+    <div style="width:100px"><label class="f">Валюта</label><select id="r_cur">${['UAH','USD','EUR'].map(c => `<option ${r && r.currency===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
+    <label class="f">День місяця</label><input id="r_day" type="number" min="1" max="31" value="${r ? r.day : 1}">
+    <label class="f">Категорія</label>${catSelect(r ? r.cat : 'Комунальні', 'r_cat')}
+    <label class="f">Ключове слово в описі (необов'язково)</label><input id="r_match" value="${esc(r ? r.match || '' : '')}" placeholder="Напр. kyivstar">
+    <div class="btns"><button class="btn" onclick="saveRec('${r ? r.id : ''}')">Зберегти</button></div>
+    ${r ? `${st.st === 'ok' && st.tx ? `<p class="hint small">Знайдено оплату: ${esc(st.tx.desc)} · ${money(st.tx.amount, st.tx.currency, true)} · ${st.tx.date.slice(0,10).split('-').reverse().join('.')}</p>` : ''}
+      <div class="btns"><button class="btn sec" onclick="togglePaid('${r.id}','${key}')">${r.paid && r.paid[key] ? 'Зняти позначку «оплачено»' : 'Позначити оплаченим за ' + MONTHS[UI.m]}</button></div>
+      <div class="btns"><button class="btn danger" onclick="delRec('${r.id}')">Видалити</button></div>` : ''}`);
+}
+function saveRec(id){
+  const amount = parseFloat($('#r_amt').value); if (!amount) return toast('Вкажіть суму');
+  let r = id ? S.recurring.find(x => x.id === id) : null;
+  if (!r) { r = {id: uid(), paid: {}}; S.recurring.push(r); }
+  Object.assign(r, {name: $('#r_name').value.trim() || 'Платіж', amount: Math.abs(amount), currency: $('#r_cur').value,
+    day: Math.min(31, Math.max(1, parseInt($('#r_day').value) || 1)), cat: $('#r_cat').value, match: $('#r_match').value.trim()});
+  save(); closeSheet(); render(); haptic('medium');
+}
+function togglePaid(id, key){ const r = S.recurring.find(x => x.id === id); r.paid ||= {}; if (r.paid[key]) delete r.paid[key]; else r.paid[key] = true; save(); closeSheet(); render(); }
+async function delRec(id){ if (!(await ask('Видалити платіж?'))) return; S.recurring = S.recurring.filter(x => x.id !== id); save(); closeSheet(); render(); }
+
+function catAddSheet(){
+  openSheet(`<h3>Нова категорія</h3>
+    <label class="f">Назва</label><input id="c_n">
+    <label class="f">Емодзі</label><input id="c_i" value="🏷️">
+    <label class="f">Тип</label><select id="c_k"><option value="">Витрата</option><option value="inc">Дохід</option></select>
+    <div class="btns"><button class="btn" onclick="addCat()">Додати</button></div>`);
+}
+function addCat(){
+  const n = $('#c_n').value.trim(); if (!n || allCats().some(c => c.n === n)) return toast('Вкажіть унікальну назву');
+  const colors = ['#e11d48','#7c3aed','#0d9488','#ea580c','#2563eb','#65a30d'];
+  S.cats.push({n, i: $('#c_i').value.trim() || '🏷️', c: colors[S.cats.length % colors.length], ...($('#c_k').value ? {k: 'inc'} : {})});
+  save(); closeSheet(); render();
+}
+function recategorize(){
+  let n = 0;
+  for (const t of S.tx) { if (t.locked) continue; const c = autoCat(t.desc, t.amount, t.mcc, t.bankCat); if (c !== t.cat) { t.cat = c; n++; } }
+  save(); render(); toast(`Оновлено ${n} операцій (ручні зміни збережено)`);
+}
+
+/* ============ Import ============ */
+let IMP = null;
+async function onFiles(files){
+  if (!files || !files.length) return;
+  const list = [];
+  for (const f of files) {
+    try {
+      const rows = await readRows(f);
+      const {hi, map} = detectHeader(rows);
+      list.push({name: f.name, rows, hi, map, bank: guessBank(rows[hi] || [], f.name), invert: false, targets: {}});
+    } catch(e) { toast(`${f.name}: ${e.message}`); }
+  }
+  if (!list.length) return;
+  IMP = {files: list, idx: 0};
+  impSheet();
+}
+function impGroups(F){
+  const recs = extract(F.rows, F.hi, F.map, F.invert);
+  const groups = {};
+  for (const r of recs) {
+    const card = r.card ? r.card.replace(/\D/g, '').slice(-4) || r.card.slice(-8) : '';
+    const k = card + '|' + (r.currency || '');
+    (groups[k] ||= {card, currency: r.currency, recs: []}).recs.push(r);
+  }
+  return {recs, groups};
+}
+function impSheet(){
+  const F = IMP.files[IMP.idx];
+  const {recs, groups} = impGroups(F);
+  const hdr = F.rows[F.hi] || [];
+  const colOpts = (f) => `<option value="">—</option>` + hdr.map((h, i) => `<option value="${i}" ${F.map[f] === i ? 'selected' : ''}>${esc(String(h).slice(0, 40) || 'Колонка ' + (i+1))}</option>`).join('');
+  const sel = f => `<label class="f">${FIELD_LABELS[f]}</label><select onchange="impMap('${f}',this.value)">${colOpts(f)}</select>`;
+  const dates = recs.map(r => r.date).sort();
+  const gk = Object.keys(groups);
+  const bankName = BANKS[F.bank]?.n || 'Рахунок';
+  const groupHtml = gk.map(k => {
+    const g = groups[k];
+    const cur = g.currency || 'UAH';
+    const ik = F.bank + '|' + g.card + '|' + cur;
+    if (!(k in F.targets)) {
+      const ex = S.accounts.find(a => a.importKey === ik) || S.accounts.find(a => a.bank === F.bank && a.currency === cur && (!g.card || (a.name || '').includes(g.card)));
+      F.targets[k] = ex ? ex.id : 'new';
+    }
+    const opts = S.accounts.filter(a => a.currency === cur).map(a => `<option value="${a.id}" ${F.targets[k] === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('');
+    return `<div class="row" style="margin-top:8px"><div class="grow small"><b>${g.card ? '•' + esc(g.card) + ' ' : ''}${cur}</b> <span class="hint">· ${g.recs.length} оп.</span></div>
+      <select style="width:58%" onchange="IMP.files[IMP.idx].targets['${k}']=this.value"><option value="new" ${F.targets[k]==='new'?'selected':''}>＋ Новий: ${esc(bankName)} ${g.card ? '•' + esc(g.card) : ''} ${cur}</option>${opts}</select></div>`;
+  }).join('');
+  const needCur = gk.some(k => !groups[k].currency);
+  openSheet(`<h3>Імпорт ${IMP.files.length > 1 ? `(${IMP.idx + 1}/${IMP.files.length})` : ''}</h3>
+    <div class="hint small ellip">📄 ${esc(F.name)}</div>
+    <div class="card" style="margin-top:10px">
+      ${recs.length ? `<div class="mid">${recs.length} операцій</div><div class="hint small">${dates[0].slice(0,10).split('-').reverse().join('.')} — ${dates[dates.length-1].slice(0,10).split('-').reverse().join('.')}</div>` : `<div class="red">Не вдалося розпізнати операції. Перевірте колонки нижче.</div>`}
+    </div>
+    <label class="f">Банк</label><select onchange="IMP.files[IMP.idx].bank=this.value;IMP.files[IMP.idx].targets={};impSheet()">${Object.entries(BANKS).map(([k, b]) => `<option value="${k}" ${F.bank===k?'selected':''}>${b.i} ${b.n}</option>`).join('')}</select>
+    ${needCur ? `<label class="f">Валюта рахунку (у файлі не вказана)</label><select onchange="impCur(this.value)"><option value="">—</option>${['UAH','USD','EUR','PLN'].map(c => `<option>${c}</option>`).join('')}</select>` : ''}
+    ${gk.length ? `<label class="f">Куди записати</label>${groupHtml}` : ''}
+    ${recs.length ? `<label class="f">Перші операції</label><table class="pv">${recs.slice(0, 5).map(r => `<tr><td>${r.date.slice(0,10).split('-').reverse().join('.')}</td><td class="ellip" style="max-width:150px">${esc(r.desc)}</td><td style="text-align:right;white-space:nowrap">${money(r.amount, r.currency || 'UAH', true)}</td></tr>`).join('')}</table>` : ''}
+    <details ${recs.length ? '' : 'open'}><summary>Налаштувати колонки</summary>
+      <label class="f">Рядок із заголовками</label><input type="number" min="1" value="${F.hi + 1}" onchange="impHeader(this.value)">
+      ${['date','desc','amount','currency','balance','card','credit','debit','mcc','bankCat','status','opAmount','opCurrency'].map(sel).join('')}
+      <label class="f"><input type="checkbox" style="width:auto" ${F.invert ? 'checked' : ''} onchange="IMP.files[IMP.idx].invert=this.checked;impSheet()"> Змінити знак усіх сум</label>
+    </details>
+    <div class="btns"><button class="btn" ${recs.length ? '' : 'disabled style="opacity:.5"'} onclick="doImport()">Імпортувати</button></div>
+    ${IMP.files.length > 1 ? `<div class="btns"><button class="btn sec" onclick="nextImport()">Пропустити файл</button></div>` : ''}`);
+}
+function impMap(f, v){ const F = IMP.files[IMP.idx]; if (v === '') delete F.map[f]; else F.map[f] = +v; F.targets = {}; impSheet(); }
+function impHeader(v){ const F = IMP.files[IMP.idx]; F.hi = Math.max(0, (+v || 1) - 1); F.map = mapHeader((F.rows[F.hi] || []).map(String)); F.targets = {}; impSheet(); }
+function impCur(c){ const F = IMP.files[IMP.idx]; F.forceCur = c; F.targets = {}; impSheet(); }
+function nextImport(){ IMP.idx++; if (IMP.idx < IMP.files.length) impSheet(); else { IMP = null; closeSheet(); render(); } }
+function doImport(){
+  const F = IMP.files[IMP.idx];
+  const {groups} = impGroups(F);
+  const ids = new Set(S.tx.map(t => t.id));
+  const keys = new Set(S.tx.filter(t => t.src !== 'file').map(t => t.k));
+  let added = 0, dup = 0;
+  for (const k of Object.keys(groups)) {
+    const g = groups[k];
+    const cur = g.currency || F.forceCur || 'UAH';
+    let acc = F.targets[k] && F.targets[k] !== 'new' ? accById(F.targets[k]) : null;
+    if (!acc) {
+      acc = {id: uid(), bank: F.bank, currency: cur, balance: null, balanceDate: null, inTotal: true,
+        name: `${BANKS[F.bank]?.n || 'Рахунок'}${g.card ? ' •' + g.card : ''} ${cur}`.trim(), importKey: F.bank + '|' + g.card + '|' + cur};
+      S.accounts.push(acc);
+    } else if (!acc.importKey) acc.importKey = F.bank + '|' + g.card + '|' + cur;
+    let latest = null;
+    for (const r of g.recs) {
+      const kk = acc.id + '|' + r.date.slice(0, 16) + '|' + r.amount.toFixed(2);
+      const id = 'f_' + hash(kk + '|' + r.desc + '|' + (r.balance ?? ''));
+      if (ids.has(id) || keys.has(kk)) { dup++; continue; }
+      ids.add(id);
+      S.tx.push({id, k: kk, acc: acc.id, date: r.date, amount: r.amount, currency: acc.currency, desc: r.desc,
+        opAmount: r.opAmount, opCurrency: r.opCurrency, mcc: r.mcc, bankCat: r.bankCat, src: 'file',
+        cat: autoCat(r.desc, r.amount, r.mcc, r.bankCat)});
+      added++;
+      if (r.balance != null && (!latest || r.date > latest.date)) latest = r;
+    }
+    if (latest && (!acc.balanceDate || latest.date >= acc.balanceDate)) { acc.balance = latest.balance; acc.balanceDate = latest.date; }
+  }
+  save(); haptic('medium');
+  toast(`Додано ${added} операцій${dup ? `, пропущено дублікатів: ${dup}` : ''}`);
+  nextImport();
+}
+
+/* ============ Monobank API ============ */
+let MONO = {token:'', info:null, busy:false};
+async function monoSheet(){
+  MONO.token = MONO.token || await Secret.get();
+  const accs = S.accounts.filter(a => a.apiId);
+  openSheet(`<h3>🐈‍⬛ Monobank API</h3>
+    <p class="hint small" style="margin-top:4px">Особистий токен дає доступ лише на читання вашої виписки. Отримати: відкрийте <a href="#" onclick="openLink('https://api.monobank.ua/');return false">api.monobank.ua</a> і відскануйте QR у застосунку Monobank. Токен зберігається тільки на цьому пристрої.</p>
+    <label class="f">Токен</label><input id="m_tok" type="password" value="${esc(MONO.token)}" placeholder="u3AulkpZFI1lIuGsik6vuPsVWqN7GoWs6o_MO2sdf301">
+    <label class="f">Завантажити історію за</label><select id="m_depth"><option value="1">останні 31 день</option><option value="2">2 місяці</option><option value="3">3 місяці</option><option value="6">6 місяців</option></select>
+    ${accs.length ? `<p class="hint small">Вже підключено рахунків: ${accs.length}. Повторна синхронізація підтягне лише нові операції.</p>` : ''}
+    <div class="btns"><button class="btn" id="m_go" onclick="monoStep1()">${accs.length ? 'Оновити рахунки й операції' : 'Підключити'}</button></div>
+    <div id="m_box"></div>
+    <div class="log" id="m_log" style="display:none"></div>`);
+}
+function mlog(s){ const l = $('#m_log'); if (!l) return; l.style.display = 'block'; l.textContent += s + '\n'; l.scrollTop = 1e9; }
+async function monoFetch(path){
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let r;
+    try { r = await fetch('https://api.monobank.ua' + path, {headers: {'X-Token': MONO.token}}); }
+    catch(e) { throw new Error('Немає з’єднання з Monobank (мережа або браузер блокує запит). Скористайтесь імпортом CSV.'); }
+    if (r.status === 429 && attempt === 0) { mlog('Ліміт запитів — чекаю 60 с…'); await countdown(61); continue; }
+    if (r.status === 403 || r.status === 401) throw new Error('Невірний токен');
+    if (!r.ok) throw new Error(`Monobank ${r.status}: ${(await r.text()).slice(0, 120)}`);
+    return r.json();
+  }
+  throw new Error('Перевищено ліміт запитів, спробуйте за хвилину');
+}
+async function countdown(sec){
+  for (let s = sec; s > 0; s--) { const b = $('#m_go'); if (b) b.textContent = `Зачекайте ${s} с (ліміт Monobank)…`; await sleep(1000); }
+}
+async function monoStep1(){
+  if (MONO.busy) return;
+  MONO.token = $('#m_tok').value.trim();
+  if (!MONO.token) return toast('Вставте токен');
+  const depth = +$('#m_depth').value;
+  Secret.set(MONO.token);
+  MONO.busy = true; SHEET_LOCK = true; $('#m_go').disabled = true;
+  try {
+    mlog('Отримую список рахунків…');
+    const info = await monoFetch('/personal/client-info');
+    MONO.info = info;
+    mlog(`Вітаю, ${info.name || ''}! Рахунків: ${(info.accounts||[]).length}, банок: ${(info.jars||[]).length}`);
+    for (const x of info.accounts || []) {
+      const cur = CUR_NUM[x.currencyCode] || String(x.currencyCode);
+      const last4 = (x.maskedPan && x.maskedPan[0] || '').slice(-4);
+      let a = S.accounts.find(z => z.apiId === x.id);
+      if (!a) {
+        const plainKey = 'mono||' + cur;
+        a = S.accounts.find(z => z.importKey === plainKey && !z.apiId) || null;
+        if (!a) { a = {id: uid(), bank: 'mono', inTotal: true, importKey: S.accounts.some(z => z.importKey === plainKey) ? 'mono|' + last4 + '|' + cur : plainKey}; S.accounts.push(a); }
+        a.apiId = x.id;
+        a.name = `Mono ${MONO_TYPES[x.type] || x.type || ''}${last4 ? ' •' + last4 : ''} ${cur}`.replace(/\s+/g, ' ');
+      }
+      a.currency = cur; a.monoType = x.type;
+      a.balance = Math.round((x.balance - (x.creditLimit || 0))) / 100;
+      a.creditLimit = (x.creditLimit || 0) / 100;
+      a.balanceDate = isoLocal(new Date());
+    }
+    for (const j of info.jars || []) {
+      const cur = CUR_NUM[j.currencyCode] || 'UAH';
+      let a = S.accounts.find(z => z.apiId === j.id);
+      if (!a) { a = {id: uid(), bank: 'mono', inTotal: true, apiId: j.id, jar: true, importKey: 'jar|' + j.id}; S.accounts.push(a); }
+      a.name = `🫙 ${j.title}`; a.currency = cur; a.balance = j.balance / 100; a.balanceDate = isoLocal(new Date());
+    }
+    save(); render();
+    const cards = S.accounts.filter(a => a.apiId && !a.jar);
+    $('#m_box').innerHTML = `<label class="f">Які рахунки синхронізувати (кожен запит — 1 хв)</label>` +
+      cards.map(a => `<label class="row small" style="margin:6px 0"><input type="checkbox" class="m_ck" value="${a.id}" style="width:auto" ${a.balance || a.monoType === 'black' || a.lastSync ? 'checked' : ''}> <span class="grow">${esc(a.name)}</span><span>${money(a.balance, a.currency, true)}</span></label>`).join('') +
+      `<div class="btns"><button class="btn" id="m_go2" onclick="monoStep2(${depth})">Завантажити операції</button></div>`;
+    $('#m_go').style.display = 'none';
+  } catch(e) { mlog('❌ ' + e.message); toast(e.message, 4000); $('#m_go').disabled = false; $('#m_go').textContent = 'Спробувати ще'; }
+  MONO.busy = false; SHEET_LOCK = false;
+}
+async function monoStep2(depth){
+  if (MONO.busy) return;
+  const sel = [...document.querySelectorAll('.m_ck:checked')].map(c => accById(c.value)).filter(Boolean);
+  if (!sel.length) return toast('Оберіть хоча б один рахунок');
+  MONO.busy = true; SHEET_LOCK = true;
+  const btn = $('#m_go2'); btn.disabled = true;
+  const ids = new Set(S.tx.map(t => t.id)), keys = new Set(S.tx.filter(t => t.src !== 'api').map(t => t.k));
+  const nowS = Math.floor(Date.now() / 1000), WIN = 2678400 - 3600;
+  let first = true, total = 0;
+  try {
+    for (const a of sel) {
+      const stop = a.lastSync ? a.lastSync - 3 * 86400 : nowS - depth * WIN;
+      let to = nowS;
+      mlog(`→ ${a.name}`);
+      while (to > stop) {
+        const from = Math.max(stop, to - WIN);
+        if (!first) { mlog('  чекаю 60 с (ліміт Monobank)…'); await countdownBtn(btn, 61); }
+        first = false;
+        const items = await monoFetch(`/personal/statement/${a.apiId}/${from}/${to}`);
+        let n = 0;
+        for (const it of items) {
+          const id = 'm_' + it.id;
+          const date = isoLocal(new Date(it.time * 1000));
+          const amount = it.amount / 100;
+          const kk = a.id + '|' + date.slice(0, 16) + '|' + amount.toFixed(2);
+          if (ids.has(id) || keys.has(kk)) continue;
+          ids.add(id);
+          const desc = (it.description || '').replace(/\n/g, ' ') + (it.comment ? ' — ' + it.comment : '');
+          S.tx.push({id, k: kk, acc: a.id, date, amount, currency: a.currency, desc,
+            opAmount: it.operationAmount / 100, opCurrency: CUR_NUM[it.currencyCode] || '', mcc: it.mcc || it.originalMcc || null,
+            src: 'api', cat: autoCat(desc, amount, it.mcc || it.originalMcc, '')});
+          n++;
+        }
+        total += n;
+        mlog(`  ${new Date(from*1000).toLocaleDateString('uk-UA')}–${new Date(to*1000).toLocaleDateString('uk-UA')}: отримано ${items.length}, нових ${n}`);
+        save();
+        if (items.length >= 500) to = Math.min(...items.map(i => i.time)) - 1;
+        else to = from;
+      }
+      a.lastSync = nowS; save();
+    }
+    mlog(`✅ Готово. Нових операцій: ${total}`);
+    toast(`Monobank: додано ${total} операцій`); haptic('medium');
+    btn.textContent = 'Готово'; render();
+  } catch(e) { mlog('❌ ' + e.message); toast(e.message, 4000); btn.disabled = false; btn.textContent = 'Продовжити'; }
+  MONO.busy = false; SHEET_LOCK = false;
+}
+async function countdownBtn(btn, sec){ for (let s = sec; s > 0; s--) { btn.textContent = `Наступний запит через ${s} с…`; await sleep(1000); } btn.textContent = 'Завантажую…'; }
+
+/* ============ Rates ============ */
+async function updateRates(force){
+  if (S.rates.manual && !force) return;
+  if (!force && Date.now() - (S.rates.at || 0) < 6 * 3600e3) return;
+  try {
+    const r = await fetch('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json');
+    const j = await r.json();
+    for (const x of j) if (['USD','EUR','PLN','GBP','CZK','CHF'].includes(x.cc)) S.rates[x.cc] = x.rate;
+    S.rates.at = Date.now(); S.rates.manual = false; save(); render();
+    if (force) toast('Курси оновлено');
+  } catch(e) { if (force) toast('Не вдалося отримати курси НБУ'); }
+}
+
+/* ============ Backup / cloud ============ */
+function download(name, text, type){
+  const blob = new Blob([text], {type});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function exportBackup(){
+  const txt = JSON.stringify(S);
+  download(`finance-backup-${isoLocal(new Date()).slice(0,10)}.json`, txt, 'application/json');
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Файл збережено і скопійовано в буфер'), () => {});
+}
+async function importBackup(file){
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data.tx || !data.accounts) throw new Error('bad');
+    if (!(await ask(`Замінити поточні дані копією (${data.tx.length} операцій)?`))) return;
+    S = Object.assign(defaults(), data); save(); render(); toast('Відновлено');
+  } catch(e) { toast('Невірний файл резервної копії'); }
+}
+function exportCSV(){
+  const rows = [['Дата','Рахунок','Валюта','Сума','Сума UAH','Категорія','Опис','Нотатка']];
+  [...S.tx].sort((a,b) => a.date.localeCompare(b.date)).forEach(t => rows.push([t.date.replace('T',' '), accById(t.acc)?.name || '', t.currency, t.amount, Math.round(toUAH(t.amount, t.currency)*100)/100, t.cat, t.desc, t.note || '']));
+  const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
+  download(`transactions-${isoLocal(new Date()).slice(0,10)}.csv`, csv, 'text/csv');
+}
+const CS = () => tg.CloudStorage;
+const csSet = (k, v) => new Promise((res, rej) => CS().setItem(k, v, (e, ok) => e ? rej(new Error(e)) : res(ok)));
+const csGet = k => new Promise((res, rej) => CS().getItem(k, (e, v) => e ? rej(new Error(e)) : res(v)));
+const csGetMany = ks => new Promise((res, rej) => CS().getItems(ks, (e, v) => e ? rej(new Error(e)) : res(v)));
+async function cloudSave(){
+  try {
+    const str = JSON.stringify(S), N = 4000, n = Math.ceil(str.length / N);
+    if (n > 1000) return toast('Забагато даних для хмари Telegram — використайте експорт JSON');
+    toast('Зберігаю в хмару…');
+    for (let i = 0; i < n; i += 20) await Promise.all(Array.from({length: Math.min(20, n - i)}, (_, j) => csSet('c' + (i + j), str.slice((i + j) * N, (i + j + 1) * N))));
+    await csSet('meta', JSON.stringify({n, at: S.savedAt || Date.now()}));
+    toast(`☁️ Збережено (${Math.round(str.length/1024)} КБ)`); haptic('medium');
+  } catch(e) { toast('Помилка хмари: ' + e.message); }
+}
+async function cloudLoad(silentCheck){
+  try {
+    const meta = JSON.parse(await csGet('meta') || 'null');
+    if (!meta) { if (!silentCheck) toast('У хмарі ще немає даних'); return; }
+    if (silentCheck && meta.at <= (S.savedAt || 0)) return;
+    if (!(await ask(`У хмарі Telegram є копія від ${new Date(meta.at).toLocaleString('uk-UA')}. Завантажити її замість даних на цьому пристрої?`))) return;
+    let str = '';
+    for (let i = 0; i < meta.n; i += 50) {
+      const ks = Array.from({length: Math.min(50, meta.n - i)}, (_, j) => 'c' + (i + j));
+      const v = await csGetMany(ks); str += ks.map(k => v[k] || '').join('');
+    }
+    S = Object.assign(defaults(), JSON.parse(str)); save(); render(); toast('Завантажено з хмари');
+  } catch(e) { if (!silentCheck) toast('Помилка хмари: ' + e.message); }
+}
+async function wipe(){
+  if (!(await ask('Точно видалити ВСІ дані з цього пристрою? Дію не можна скасувати.'))) return;
+  S = defaults(); save(); render(); toast('Дані видалено');
+}
+
+/* ============ Init ============ */
+async function init(){
+  if (tg) { try { tg.ready(); tg.expand(); if (ver('6.1')) { tg.setHeaderColor('secondary_bg_color'); tg.setBackgroundColor('secondary_bg_color'); } if (ver('7.7')) tg.disableVerticalSwipes(); } catch(e){} }
+  const raw = await Store.load();
+  try { S = raw ? Object.assign(defaults(), JSON.parse(raw)) : defaults(); } catch(e) { S = defaults(); }
+  render();
+  updateRates();
+  if (ver('6.9')) cloudLoad(true);
+}
+init();
+</script>
+</body>
+</html>
