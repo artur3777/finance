@@ -1195,6 +1195,7 @@ more(){
   </div>
   <h2>Правила категорій</h2>
   <div class="card list" style="padding:2px 14px">${rules || '<div class="hint" style="padding:12px 0">Правила створюються, коли змінюєте категорію операції з галочкою «застосувати до схожих».</div>'}</div>
+  <div class="btns"><button class="btn sec" onclick="cleanDuplicates()">🧹 Прибрати дублікати</button></div>
   <div class="btns"><button class="btn sec" onclick="recategorize()">Перерахувати категорії</button><button class="btn sec" onclick="catAddSheet()">＋ Категорія</button></div>
   <h2>Резервна копія та синхронізація</h2>
   <div class="card">
@@ -1482,11 +1483,46 @@ function impMap(f, v){ const F = IMP.files[IMP.idx]; if (v === '') delete F.map[
 function impHeader(v){ const F = IMP.files[IMP.idx]; F.hi = Math.max(0, (+v || 1) - 1); F.map = mapHeader((F.rows[F.hi] || []).map(String)); F.targets = {}; impSheet(); }
 function impCur(c){ const F = IMP.files[IMP.idx]; F.forceCur = c; F.targets = {}; impSheet(); }
 function nextImport(){ IMP.idx++; if (IMP.idx < IMP.files.length) impSheet(); else { IMP = null; closeSheet(); render(); } }
+// Duplicate detection against what is already stored for an account.
+// Matches by minute + amount; if either side has no time (00:00), by day + amount.
+// Works as a multiset, so two identical coffees in one file are both kept,
+// but re-importing the same period (in any format: CSV, Excel, PDF, API) adds nothing.
+function dupIndex(accId){
+  const byMin = new Map(), byDay = new Map(), byDayMidnight = new Map();
+  const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1), dec = (m, k) => m.set(k, m.get(k) - 1);
+  for (const t of S.tx) {
+    if (t.acc !== accId) continue;
+    const a = t.amount.toFixed(2);
+    inc(byMin, t.date.slice(0, 16) + '|' + a); inc(byDay, t.date.slice(0, 10) + '|' + a);
+    if (t.date.slice(11, 16) === '00:00') inc(byDayMidnight, t.date.slice(0, 10) + '|' + a);
+  }
+  return {
+    take(date, amount){
+      const a = (+amount).toFixed(2), km = date.slice(0, 16) + '|' + a, kd = date.slice(0, 10) + '|' + a;
+      if (byMin.get(km) > 0) { dec(byMin, km); dec(byDay, kd); if (date.slice(11,16) === '00:00' && byDayMidnight.get(kd) > 0) dec(byDayMidnight, kd); return true; }
+      if (date.slice(11, 16) === '00:00' && byDay.get(kd) > 0) { dec(byDay, kd); return true; }
+      if (byDayMidnight.get(kd) > 0) { dec(byDayMidnight, kd); dec(byDay, kd); return true; }
+      return false;
+    }
+  };
+}
+async function cleanDuplicates(){
+  const seen = new Map(), drop = new Set();
+  const nd = d => String(d || '').toLowerCase().replace(/^card charge\s*\(|\)$/g, '').replace(/[^a-zа-яіїєґ]/gi, '').slice(0, 12);
+  for (const t of [...S.tx].sort((a, b) => (a.src === 'api' ? 0 : 1) - (b.src === 'api' ? 0 : 1))) {
+    const k = t.acc + '|' + t.date.slice(0, 16) + '|' + t.amount.toFixed(2) + '|' + nd(t.desc);
+    const prev = seen.get(k);
+    if (prev && prev.id !== t.id && (prev.src !== t.src || prev.id.slice(0, 2) !== t.id.slice(0, 2) || prev.desc !== t.desc)) drop.add(t.id);
+    else if (!prev) seen.set(k, t);
+  }
+  if (!drop.size) return toast('Дублікатів не знайдено ✓');
+  if (!(await ask(`Знайдено дублікатів: ${drop.size}. Видалити їх?`))) return;
+  S.tx = S.tx.filter(t => !drop.has(t.id)); save(); render(); toast(`Видалено ${drop.size} дублікатів`);
+}
 function doImport(){
   const F = IMP.files[IMP.idx];
   const {groups} = impGroups(F);
   const ids = new Set(S.tx.map(t => t.id));
-  const keys = new Set(S.tx.filter(t => t.src !== 'file').map(t => t.k));
   let added = 0, dup = 0;
   for (const k of Object.keys(groups)) {
     const g = groups[k];
@@ -1498,16 +1534,18 @@ function doImport(){
       S.accounts.push(acc);
     } else if (!acc.importKey) acc.importKey = F.bank + '|' + g.card + '|' + cur;
     let latest = null;
+    const dd = dupIndex(acc.id), occ = new Map();
     for (const r of g.recs) {
       const kk = acc.id + '|' + r.date.slice(0, 16) + '|' + r.amount.toFixed(2);
-      const id = 'f_' + hash(kk + '|' + r.desc + '|' + (r.balance ?? ''));
-      if (ids.has(id) || keys.has(kk)) { dup++; continue; }
+      const base = kk + '|' + r.desc + '|' + (r.balance ?? ''), n = occ.get(base) || 0; occ.set(base, n + 1);
+      const id = 'f_' + hash(base + (n ? '#' + n : ''));
+      if (r.balance != null && (!latest || r.date > latest.date)) latest = r;
+      if (ids.has(id) || dd.take(r.date, r.amount)) { dup++; continue; }
       ids.add(id);
       S.tx.push({id, k: kk, acc: acc.id, date: r.date, amount: r.amount, currency: acc.currency, desc: r.desc,
         opAmount: r.opAmount, opCurrency: r.opCurrency, mcc: r.mcc, bankCat: r.bankCat, src: 'file',
         cat: autoCat(r.desc, r.amount, r.mcc, r.bankCat)});
       added++;
-      if (r.balance != null && (!latest || r.date > latest.date)) latest = r;
     }
     if (latest && (!acc.balanceDate || latest.date >= acc.balanceDate)) { acc.balance = latest.balance; acc.balanceDate = latest.date; }
   }
@@ -1608,13 +1646,14 @@ async function monoStep2(depth){
         if (!first) { mlog('  чекаю 60 с (ліміт Monobank)…'); await countdownBtn(btn, 61); }
         first = false;
         const items = await monoFetch(`/personal/statement/${a.apiId}/${from}/${to}`);
+        const dd = dupIndex(a.id);
         let n = 0;
         for (const it of items) {
           const id = 'm_' + it.id;
           const date = isoLocal(new Date(it.time * 1000));
           const amount = it.amount / 100;
           const kk = a.id + '|' + date.slice(0, 16) + '|' + amount.toFixed(2);
-          if (ids.has(id) || keys.has(kk)) continue;
+          if (ids.has(id) || dd.take(date, amount)) continue;
           ids.add(id);
           const desc = (it.description || '').replace(/\n/g, ' ') + (it.comment ? ' — ' + it.comment : '');
           S.tx.push({id, k: kk, acc: a.id, date, amount, currency: a.currency, desc,
